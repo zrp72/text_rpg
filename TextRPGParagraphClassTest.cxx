@@ -4,6 +4,7 @@
 #include <map>
 #include <stdexcept>
 #include <limits>
+#include <fstream>
 
 std::string writtenStory = R"(
 Start: The world before you 
