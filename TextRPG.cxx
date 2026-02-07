@@ -132,7 +132,10 @@ int main(){
     main_character.lineage = randomize_lineage();
     std::cout << "Lineage: " << main_character.lineage << '\n';
     try {
-		auto story = loadStory(writtenStory);
+		std::ifstream story_file("Story.txt");
+		std::stringstream written_story;
+		written_story << story_file.rdbuf();
+		auto story = loadStory(written_story.str());
 		run_Story(story, "Start");
 	} catch (std::exception &e) {
 		std::cerr << e.what() << '\n';
