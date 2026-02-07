@@ -6,14 +6,14 @@
 #include <limits>
 
 std::string writtenStory = R"(
-00001: The world before you 
+Start: The world before you 
 
-00001:00002 Turn left
-00001:00003 Turn right
+Start:Fields_of_demise Turn left
+Start:Grassy_plains Turn right
 
-00002: lava
+Fields_of_demise: lava
 
-00003: field
+Grassy_plains: field
 )";
 
 class option {
@@ -49,50 +49,51 @@ loadStory(const std::string &writtenStory){
 	std::string line;
 
 	while(std::getline(story, line)){
+		int colon = line.find(':');
+		int space = line.find(' ');
 		if (line.length() == 0){
 			continue;
 		}
-		else if (line.length() <7 ){
-			throw std::runtime_error("Line too short");
+		if (colon == std::string::npos){
+			throw std::runtime_error("Delimiter not found");
 		}
-		else if (line[5] != ':' ){
-			throw std::runtime_error("Identifier not distinguished");
-		}
-		else if (line[5] == ':' && line[6] == ' '){
-			std::string tag = line.substr(0,5);
-			std::string text = line.substr(7);
+		if (line[colon + 1] == ' '){
+			std::string tag = line.substr(0,colon);
+			std::string text = line.substr(colon + 2);
 			while (std::getline(story, line) && !line.empty()) {
 				text+= '\n' + line;
 			}
 			paragraphs[tag] = paragraph(text);
 		}
-		else if (line.length() >= 11 && line[11] == ' '){
-			std::string source = line.substr(0,5);
-			std::string destination = line.substr(6,5);
+		else if (line[colon + 1] != ' '){
+			std::string source = line.substr(0,colon);
+			std::string destination = line.substr(colon + 1,space - colon - 1);
 			paragraph &origin = paragraphs[source];
-			origin.options.push_back(option(line.substr(11),destination));
+			origin.options.push_back(option(line.substr(space + 1),destination));
 		}
 	}
 	return paragraphs;
 }
 
-int get_valid_integer(int max){
+int get_valid_choice(int max){
 	int decision;
 	std::cin >> decision;
-	while (std::cin.fail() || decision <= 0 || decision > max){
+	if (std::cin.fail() || decision <= 0 || decision > max){
 		std::cerr << "Invalid choice: " << decision << "\nMax: " << max << '\n';
 		std::cin.clear();
-		std::cin.ignore(std::numeric_limits<std::streamsize> ::max());
-		std::cin >> decision;
+		std::cin.ignore(std::numeric_limits<std::streamsize> ::max(), '\n');
+		decision = -1;
 	}
-
 	return decision;
 }
 
 void run_Story(std::map<std::string, paragraph> paragraphs, std::string current_paragraph){
 	auto p = paragraphs[current_paragraph];
-	p.display();
-	int decision = get_valid_integer(p.options.size());
+	int decision = -1;
+	while (decision == -1){
+		p.display();
+		decision = get_valid_choice(p.options.size());
+	}
 	auto next_paragraph = p.options[decision - 1].dest_label;
 	run_Story(paragraphs, next_paragraph);
 };
@@ -100,7 +101,7 @@ void run_Story(std::map<std::string, paragraph> paragraphs, std::string current_
 int main() {
 	try {
 		auto story = loadStory(writtenStory);
-		run_Story(story, "00001");
+		run_Story(story, "Start");
 	} catch (std::exception &e) {
 		std::cerr << e.what() << '\n';
 		return 1;
