@@ -6,17 +6,6 @@
 #include <limits>
 #include <fstream>
 
-std::string writtenStory = R"(
-Start: The world before you 
-
-Start:Fields_of_demise Turn left
-Start:Grassy_plains Turn right
-
-Fields_of_demise: lava
-
-Grassy_plains: field
-)";
-
 class option {
 	public:
 	std::string prompt;
@@ -101,7 +90,10 @@ void run_Story(std::map<std::string, paragraph> paragraphs, std::string current_
 
 int main() {
 	try {
-		auto story = loadStory(writtenStory);
+		std::ifstream story_file("Story.txt");
+		std::stringstream written_story;
+		written_story << story_file.rdbuf();
+		auto story = loadStory(written_story.str());
 		run_Story(story, "Start");
 	} catch (std::exception &e) {
 		std::cerr << e.what() << '\n';
