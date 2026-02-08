@@ -1,7 +1,7 @@
 Start: The world before you 
 
-Start:Fields_of_demise Turn left
-Start:Grassy_plains Turn right
+{Start:Fields_of_demise} Turn left
+{Start:Grassy_plains} Turn right
 
 
 Fields_of_demise: lava

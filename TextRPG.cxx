@@ -7,19 +7,8 @@
 #include <random>
 #include <fstream>
 
-std::string lineage = "";
-std::string writtenStory = R"(
-Start: The world before you 
-
-Start:Fields_of_demise Turn left
-Start:Grassy_plains Turn right
-
-Fields_of_demise: lava
-
-Grassy_plains: field
-)";
-
 std::string randomize_lineage(){
+    std::string lineage = "";
     static const std::vector<std::string> options = {
         "Human",
         "Elf",
@@ -79,7 +68,7 @@ loadStory(const std::string &writtenStory){
 
 	while(std::getline(story, line)){
 		int colon = line.find(':');
-		int space = line.find(' ');
+		int close_bracket = line.find('}');
 		if (line.length() == 0){
 			continue;
 		}
@@ -95,10 +84,10 @@ loadStory(const std::string &writtenStory){
 			paragraphs[tag] = paragraph(text);
 		}
 		else if (line[colon + 1] != ' '){
-			std::string source = line.substr(0,colon);
-			std::string destination = line.substr(colon + 1,space - colon - 1);
+			std::string source = line.substr(1,colon - 1);
+			std::string destination = line.substr(colon + 1,close_bracket - colon - 1);
 			paragraph &origin = paragraphs[source];
-			origin.options.push_back(option(line.substr(space + 1),destination));
+			origin.options.push_back(option(line.substr(close_bracket + 1),destination));
 		}
 	}
 	return paragraphs;
