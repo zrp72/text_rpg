@@ -1,10 +1,9 @@
 Start: The world before you 
 
-{Start:Fields_of_demise} Turn left
-{Start:Grassy_plains} Turn right
+{Start:Town~} Turn left
+{Start:Wilderness} Turn right
 
-
-Fields_of_demise: lava
-
-
-Grassy_plains: field
+[Town~]:
+Villian = Rep < 0
+Neutral = Rep => 0 < 10
+Hero = Rep => 10
