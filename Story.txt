@@ -1,15 +1,41 @@
+//Syntax Key:
+
+//For paragraphs, simply type the name of the paragraph with a : at the end. 
+//Anything beyond the colon until the next empty line will be part of that paragraph.
+
+//For options, within curly brackets, write the source and destination paragraphs seperated by a colon.
+//Outside the brackets, write the prompt for the option on the same line.
+//To direct to a nexus, add a ~ at the end of the destination tag.
+//Example: "{Town:Store}"
+
+//For a nexus, within square brackets, write the destination paragraph with a ~ at the end, followed by a colon outside the brackets.
+//Following lines will be the destination variations followed by the attribute condition. 
+//The colon between the attribute and its value is equivalent to >=
+//The first variation is the default, and as such it does not need a value.
+//Example:
+//[Store~]:
+//Bad Credit = Credit:
+//Average Credit = Credit:0
+//Amazing Credit = Credit:20
+
+
+
+
 Start: The world before you 
 
 {Start:Town~} Turn left
 {Start:Wilderness} Turn right
+
 
 [Town~]:
 Villian = Rep:
 Neutral = Rep:0
 Hero = Rep:10
 
-TownVillain: TestSuccess
+Town~Villain: TestSuccess
 
-TownNeutral: TestSuccess
+Town~Neutral: TestSuccess
 
 TownHero: TestSuccess
+
+Wilderness: The grasses roll across the hills before you.
