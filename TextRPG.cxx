@@ -46,10 +46,10 @@ class option {
 class directory {
 	public:
 	std::vector<std::string> var_check;
-	std::vector<std::string> possible_paragraphs;
+	std::vector<std::string> paragraph_version;
 	std::map<std::string, std::string> var_to_par;
 
-	directory():var_check(), possible_paragraphs(), var_to_par(){};
+	directory():var_check(), paragraph_version(), var_to_par(){};
 };
 
 class paragraph{
@@ -77,26 +77,32 @@ loadStory(const std::string &writtenStory){
 
 	while(std::getline(story, line)){
 		int colon = line.find(':');
-		int close_bracket = line.find('}');
 		if (line.length() == 0){
 			continue;
 		}
 		if (colon == std::string::npos){
 			throw std::runtime_error("Delimiter not found");
 		}
+		//Directories
 		switch (line[0]){ 
-		case '[':
+		case '[':{
+			int close_bracket = line.find(']');
+			std::string label = line.substr(1,close_bracket - 1);
 			while (std::getline(story, line) && !line.empty()){
 				;
 			}
+		}
 			break;
+		//Options
 		case '{':{
+			int close_bracket = line.find('}');
 			std::string source = line.substr(1,colon - 1);
 			std::string destination = line.substr(colon + 1,close_bracket - colon - 1);
 			paragraph &origin = paragraphs[source];
 			origin.options.push_back(option(line.substr(close_bracket + 1),destination));
 		}
 			break;
+		//Paragraphs
 		default:{
 			std::string tag = line.substr(0,colon);
 			std::string text = line.substr(colon + 2);

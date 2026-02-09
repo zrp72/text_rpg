@@ -4,6 +4,12 @@ Start: The world before you
 {Start:Wilderness} Turn right
 
 [Town~]:
-Villian = Rep < 0
-Neutral = Rep => 0 < 10
-Hero = Rep => 10
+Villian = Rep (<) 0
+Neutral = Rep (=>) 0 < 10
+Hero = Rep (=>) 10
+
+TownVillain: TestSuccess
+
+TownNeutral: TestSuccess
+
+TownHero: TestSuccess
