@@ -7,7 +7,9 @@
 #include <random>
 #include <fstream>
 
-int Rep = 0;
+#include <cerrno>
+#include <cstring>
+#include <filesystem>
 
 std::string randomize_lineage(){
     std::string lineage = "";
@@ -29,11 +31,12 @@ std::string randomize_lineage(){
 
 class character {
     public: 
+	std::map<std::string, int> attributes;
     std::string lineage;
     std::string alignment;
     std::string reputation;
 
-    character():lineage(""), alignment(""), reputation(""){};
+    character():attributes(), lineage(""), alignment(""), reputation(""){};
 };
 
 class option {
@@ -50,8 +53,8 @@ class paragraph{
 	std::string text;
 	std::vector<option> options;
 
-	paragraph():text(""), options(){};
-	paragraph(std::string t) : text(t) {}
+	paragraph() : text(""), options(){};
+	paragraph(std::string t) : text(t){}
 
 	void display() {
 		std::cout << text << '\n';
@@ -64,6 +67,10 @@ class paragraph{
 
 std::map<std::string, paragraph> 
 loadStory(const std::string &writtenStory){
+    character main_character;
+    main_character.lineage = randomize_lineage();
+    std::cout << "Lineage: " << main_character.lineage << '\n';
+
 	std::map<std::string, paragraph> paragraphs;
 	std::stringstream story(writtenStory);
 	std::string line;
@@ -76,7 +83,7 @@ loadStory(const std::string &writtenStory){
 		if (colon == std::string::npos){
 			throw std::runtime_error("Delimiter not found");
 		}
-		//Directories
+		//Nexuses
 		switch (line[0]){ 
 		case '[':{
 			int close_bracket = line.find(']');
@@ -86,8 +93,6 @@ loadStory(const std::string &writtenStory){
 				destinations+= line + '\n';
 			}
             paragraphs[label] = paragraph(destinations);
-            //std::cout << paragraphs[label].text;
-            //std::cout << label;
 		}
 			break;
 		//Options
@@ -125,19 +130,22 @@ int get_valid_choice(int max){
 	return decision;
 }
 
-std::string get_destination(std::map<std::string, paragraph> paragraphs, std::string par_nexus){
+std::string get_destination(std::map<std::string, paragraph> story_map, std::string par_nexus){
     std::string destination;
-    std::string possible_dest;
-    std::stringstream all_possibilities(paragraphs[par_nexus].text);
-    while (getline(all_possibilities, possible_dest)){
-        int equal = possible_dest.find('=');
-        int open_paren = possible_dest.find('(');
-        std::string dest_ver = possible_dest.substr(0,equal - 1);
-        std::string x = possible_dest.substr(equal + 2,open_paren - equal - 2);
-        if (Rep == 0){
+    std::string line;
+    std::stringstream routes(story_map[par_nexus].text);
+	std::map<std::string, int> attributes;
+	attributes["Rep"] = int(1);
+    while (getline(routes, line)){
+        int equal = line.find('=');
+		int colon = line.find(':');
+		std::string dest_ver = line.substr(0,equal - 1);
+		std::string x = line.substr(equal + 2,colon - equal - 2);
+		int v = std::stoi(line.substr(colon + 1));
+
+        if (attributes[x] > v){
             destination = par_nexus.substr(0,par_nexus.length() - 1) + dest_ver;
         }
-        std::cout << "X Test: " << x << '\n';
     }
     return destination;
 }
@@ -145,7 +153,7 @@ std::string get_destination(std::map<std::string, paragraph> paragraphs, std::st
 void run_Story(std::map<std::string, paragraph> paragraphs, std::string current_paragraph){
 	auto p = paragraphs[current_paragraph];
 	int decision = -1;
-	while (decision == -1){
+	while (decision == -1){;
 		p.display();
 		decision = get_valid_choice(p.options.size());
 	}
@@ -156,12 +164,21 @@ void run_Story(std::map<std::string, paragraph> paragraphs, std::string current_
 	run_Story(paragraphs, next_paragraph);
 }
 
-int main(){
-    character main_character;
-    main_character.lineage = randomize_lineage();
-    std::cout << "Lineage: " << main_character.lineage << '\n';
+int main(int argc, char** argv){
+	std::string file_path(argv[0]);
+	int last_slash = file_path.rfind('\\');
+	std::string story_directory = file_path.substr(0,last_slash);
+	std::cout << "Original filesystem: " << std::filesystem::current_path() << '\n';
+	std::cout << "Story directory: " << story_directory << '\n';
+
     try {
+		std::filesystem::current_path(story_directory);
 		std::ifstream story_file("Story.txt");
+		if (!story_file) {
+    		std::cerr << "Error opening file: " 
+                  << std::strerror(errno); 
+    		return 1;
+		}
 		std::stringstream written_story;
 		written_story << story_file.rdbuf();
 		auto story = loadStory(written_story.str());
