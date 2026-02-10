@@ -1,11 +1,24 @@
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <vector>
 #include <map>
-#include <stdexcept>
 #include <limits>
 #include <random>
-#include <fstream>
+#include <filesystem>
+
+#include <stdexcept> //may not be needed
+#include <cerrno>
+#include <cstring>
+
+void 
+set_directory (std::string original_filepath){
+	int last_slash = original_filepath.rfind('\\');
+	std::string story_directory = original_filepath.substr(0,last_slash);
+	//std::cout << "Original directory: " << std::filesystem::current_path() << '\n';
+	//std::cout << "Story directory: " << story_directory << '\n';
+	std::filesystem::current_path(story_directory);
+}
 
 std::string randomize_lineage(){
     std::string lineage = "";
@@ -22,34 +35,29 @@ std::string randomize_lineage(){
     std::mt19937 gen(rd());
     std::uniform_int_distribution<std::size_t> dist(0, options.size() - 1);
     lineage = options[dist(gen)];
+	std::cout << "Lineage: " << lineage << '\n';
     return lineage;
 }
 
 class character {
     public: 
+	std::map<std::string, int> attributes;
     std::string lineage;
     std::string alignment;
     std::string reputation;
 
-    character():lineage(""), alignment(""), reputation(""){};
+    character():attributes(), lineage(""), alignment(""), reputation(""){};
 };
 
 class option {
 	public:
 	std::string prompt;
 	std::string dest_label;
+	std::map<std::string, int> stat_change_map;
 
-	option():prompt(""), dest_label(""){};
-	option(std::string p, std::string dest) : prompt(p), dest_label(dest) {}
-};
-
-class directory {
-	public:
-	std::vector<std::string> var_check;
-	std::vector<std::string> paragraph_version;
-	std::map<std::string, std::string> var_to_par;
-
-	directory():var_check(), paragraph_version(), var_to_par(){};
+	option() : prompt(), dest_label(){}
+	option(std::string p, std::string dest) : prompt(p), dest_label(dest){}
+	option(std::string p, std::string dest, std::map<std::string, int> map) : prompt(p), dest_label(dest), stat_change_map(map){}
 };
 
 class paragraph{
@@ -57,8 +65,8 @@ class paragraph{
 	std::string text;
 	std::vector<option> options;
 
-	paragraph():text(""), options(){};
-	paragraph(std::string t) : text(t) {}
+	paragraph() : text(""), options(){};
+	paragraph(std::string t) : text(t){}
 
 	void display() {
 		std::cout << text << '\n';
@@ -69,28 +77,39 @@ class paragraph{
 	}
 };
 
+class game_data {
+	public:
+	std::map<std::string, paragraph> story;
+	std::string story_location;
+	character player;
+
+	game_data(std::map<std::string, paragraph> s, std::string l, character p) : story(s), story_location(l), player(p){};
+};
+
 std::map<std::string, paragraph> 
-loadStory(const std::string &writtenStory){
-	std::map<std::string, paragraph> paragraphs;
+parse_story(const std::string &writtenStory){
+	std::map<std::string, paragraph> story_map;
 	std::stringstream story(writtenStory);
 	std::string line;
 
 	while(std::getline(story, line)){
 		int colon = line.find(':');
-		if (line.length() == 0){
+		if (line.length() == 0 || line.substr(0,2) == "//"){
 			continue;
 		}
 		if (colon == std::string::npos){
 			throw std::runtime_error("Delimiter not found");
 		}
-		//Directories
+		//Nexuses
 		switch (line[0]){ 
 		case '[':{
 			int close_bracket = line.find(']');
+            std::string destinations;
 			std::string label = line.substr(1,close_bracket - 1);
 			while (std::getline(story, line) && !line.empty()){
-				;
+				destinations+= line + '\n';
 			}
+            story_map[label] = paragraph(destinations);
 		}
 			break;
 		//Options
@@ -98,8 +117,23 @@ loadStory(const std::string &writtenStory){
 			int close_bracket = line.find('}');
 			std::string source = line.substr(1,colon - 1);
 			std::string destination = line.substr(colon + 1,close_bracket - colon - 1);
-			paragraph &origin = paragraphs[source];
-			origin.options.push_back(option(line.substr(close_bracket + 1),destination));
+			paragraph &origin = story_map[source];
+			if (line.substr(close_bracket + 1, 1) == "("){
+				int open_paren = line.find('(');
+				int close_paren = line.find(')');
+				std::stringstream stat_changes(line.substr(open_paren, close_paren - open_paren));
+				std::string current_change;
+				std::map<std::string, int> statchange_map;
+				while(getline(stat_changes, current_change, ',')){
+					int colon = current_change.find(':');
+					std::string affected_stat = current_change.substr(1, colon - 1);
+					int change = std::stoi(current_change.substr(colon + 1));
+					statchange_map[affected_stat] = int(change);
+				}
+				origin.options.push_back(option(line.substr(close_paren + 1),destination, statchange_map));
+			}else{
+				origin.options.push_back(option(line.substr(close_bracket + 1),destination));
+			}
 		}
 			break;
 		//Paragraphs
@@ -109,11 +143,11 @@ loadStory(const std::string &writtenStory){
 			while (std::getline(story, line) && !line.empty()){
 				text+= '\n' + line;
 			}
-			paragraphs[tag] = paragraph(text);
+			story_map[tag] = paragraph(text);
 		}
 		}
 	}
-	return paragraphs;
+	return story_map;
 }
 
 int get_valid_choice(int max){
@@ -128,36 +162,101 @@ int get_valid_choice(int max){
 	return decision;
 }
 
-/*std::string direct_destination(std::string directory){
+std::string get_destination(game_data data, std::string par_nexus){
+    std::string destination;
+    std::string line;
+    std::stringstream text(data.story[par_nexus].text);
+	auto attributes = data.player.attributes;
+    while (getline(text, line) && !line.empty()){
+        int equal = line.find('=');
+		int colon = line.find(':');
+		std::string dest_ver = line.substr(0,equal - 1);
 
+		if (line.substr(colon + 1) != ""){
+			std::stringstream checks(line.substr(equal + 1));
+			std::string c;
+			std::string stat;
+			int val;
+			bool viable = true;
+			while (viable && std::getline(checks, c, ',')){
+				int ccolon = c.find(':');
+				stat = c.substr(1, ccolon - 1);
+				val = std::stoi(c.substr(ccolon + 1));
+				viable = attributes[stat] >= val;
+			}
+			if (viable){
+            	destination = par_nexus + dest_ver;
+        	}
+		}else{
+			destination = par_nexus + dest_ver;
+		}
+    }
+    return destination;
+}
+
+/*void save_game(game_data active_data){
+	std::ofstream save_data;
+	save_data.open("save_data");
+	save_data.close();
 }*/
 
-void run_Story(std::map<std::string, paragraph> paragraphs, std::string current_paragraph){
-	auto p = paragraphs[current_paragraph];
+void run_Story(game_data data){
+	auto p = data.story[data.story_location];
 	int decision = -1;
-	while (decision == -1){
+	while (decision == -1){;
 		p.display();
 		decision = get_valid_choice(p.options.size());
 	}
-	auto next_paragraph = p.options[decision - 1].dest_label;
-	/*if (next_paragraph[next_paragraph.length() - 1] == '~'){
-		direct_destination(next_paragraph);
-	}*/
-	run_Story(paragraphs, next_paragraph);
+	
+	option chosen_option = p.options[decision - 1];
+	std::string next_paragraph = chosen_option.dest_label;
+	if (!chosen_option.stat_change_map.empty()){
+		for (const std::pair it : chosen_option.stat_change_map) {
+        std::string attribute = it.first;
+		std::cout << "Attribute check: " << attribute << '\n'; //TESTING PURPOSES
+		std::cout << "Attribute numerator: " << data.player.attributes[attribute] << '\n'; //TESTING PURPOSES
+		int difference = it.second;
+		data.player.attributes[attribute] = data.player.attributes[attribute] + difference;
+		std::cout << "New attribute numerator: " << data.player.attributes[attribute] << '\n'; //TESTING PURPOSES
+    	}
+	}
+	if (next_paragraph[next_paragraph.length() - 1] == '~'){
+		next_paragraph = get_destination(data, next_paragraph);
+	}
+	data.story_location = next_paragraph;
+	//save_game(data);
+	run_Story(data);
 }
 
-int main(){
-    character main_character;
-    main_character.lineage = randomize_lineage();
-    std::cout << "Lineage: " << main_character.lineage << '\n';
+game_data 
+load_game(const std::string &writtenStory){
+	character player;
+    player.lineage = randomize_lineage();
+	player.attributes["Rep"] = 0; //TESTING PURPOSES
+	player.attributes["Weariness"] = 0; //TESTING PURPOSES
+	auto story = parse_story(writtenStory);
+	game_data data(story, "Start", player);
+
+	return data;
+}
+
+
+int main(int argc, char** argv){
+	set_directory(argv[0]);
+
     try {
 		std::ifstream story_file("Story.txt");
-		std::stringstream written_story;
-		written_story << story_file.rdbuf();
-		auto story = loadStory(written_story.str());
-		run_Story(story, "Start");
+		if (!story_file) {
+    		std::cerr << "Error opening file: " 
+                  << std::strerror(errno); 
+    		return 1;
+		}
+		std::stringstream story;
+		story << story_file.rdbuf();
+		game_data loaded_data = load_game(story.str());
+		run_Story(loaded_data);
 	} catch (std::exception &e) {
-		std::cerr << e.what() << '\n';
+		std::cerr << "err: " << e.what() << '\n';
 		return 1;
 	}
 	return 0;
