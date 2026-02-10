@@ -23,7 +23,7 @@
 
 Start: The world before you 
 
-{Start:Town~} Turn left
+{Start:Town~}(Rep:1, Weariness:2) Turn left
 {Start:Wilderness} Turn right
 
 

@@ -53,8 +53,11 @@ class option {
 	public:
 	std::string prompt;
 	std::string dest_label;
+	std::map<std::string, int> stat_change_map;
 
-	option(std::string p, std::string dest) : prompt(p), dest_label(dest) {}
+	option() : prompt(), dest_label(){}
+	option(std::string p, std::string dest) : prompt(p), dest_label(dest){}
+	option(std::string p, std::string dest, std::map<std::string, int> map) : prompt(p), dest_label(dest), stat_change_map(map){}
 };
 
 class paragraph{
@@ -115,7 +118,18 @@ parse_story(const std::string &writtenStory){
 			std::string source = line.substr(1,colon - 1);
 			std::string destination = line.substr(colon + 1,close_bracket - colon - 1);
 			paragraph &origin = story_map[source];
-			origin.options.push_back(option(line.substr(close_bracket + 1),destination));
+			if (line.substr(close_bracket + 1, 1) == "("){
+				int second_colon = line.rfind(':');
+				int open_paren = line.find('(');
+				int close_paren = line.find(')');
+				std::string affected_stat = line.substr(open_paren + 1, second_colon - open_paren - 1);
+				int change = std::stoi(line.substr(second_colon + 1, close_paren - second_colon - 1));
+				std::map<std::string, int> statchange_map;
+				statchange_map[affected_stat] = int(change);
+				origin.options.push_back(option(line.substr(close_paren + 1),destination, statchange_map));
+			}else{
+				origin.options.push_back(option(line.substr(close_bracket + 1),destination));
+			}
 		}
 			break;
 		//Paragraphs
@@ -167,6 +181,12 @@ std::string get_destination(game_data data, std::string par_nexus){
     return destination;
 }
 
+/*void save_game(game_data active_data){
+	std::ofstream save_data;
+	save_data.open("save_data");
+	save_data.close();
+}*/
+
 void run_Story(game_data data){
 	auto p = data.story[data.story_location];
 	int decision = -1;
@@ -175,11 +195,22 @@ void run_Story(game_data data){
 		decision = get_valid_choice(p.options.size());
 	}
 	
-	auto next_paragraph = p.options[decision - 1].dest_label;
+	option chosen_option = p.options[decision - 1];
+	std::string next_paragraph = chosen_option.dest_label;
 	if (next_paragraph[next_paragraph.length() - 1] == '~'){
 		next_paragraph = get_destination(data, next_paragraph);
 	}
+	if (!chosen_option.stat_change_map.empty()){
+		auto stat_change = chosen_option.stat_change_map.begin();
+		std::string attribute = stat_change->first;
+		std::cout << "Attribute check: " << attribute << '\n'; //TESTING PURPOSES
+		std::cout << "Attribute numerator: " << data.player.attributes[attribute] << '\n'; //TESTING PURPOSES
+		int difference = stat_change->second;
+		data.player.attributes[attribute] = data.player.attributes[attribute] + difference;
+		std::cout << "New attribute numerator: " << data.player.attributes[attribute] << '\n'; //TESTING PURPOSES
+	}
 	data.story_location = next_paragraph;
+	//save_game(data);
 	run_Story(data);
 }
 
