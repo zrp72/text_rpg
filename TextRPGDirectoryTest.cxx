@@ -119,13 +119,17 @@ parse_story(const std::string &writtenStory){
 			std::string destination = line.substr(colon + 1,close_bracket - colon - 1);
 			paragraph &origin = story_map[source];
 			if (line.substr(close_bracket + 1, 1) == "("){
-				int second_colon = line.rfind(':');
 				int open_paren = line.find('(');
 				int close_paren = line.find(')');
-				std::string affected_stat = line.substr(open_paren + 1, second_colon - open_paren - 1);
-				int change = std::stoi(line.substr(second_colon + 1, close_paren - second_colon - 1));
+				std::stringstream stat_changes(line.substr(open_paren, close_paren - open_paren));
+				std::string current_change;
 				std::map<std::string, int> statchange_map;
-				statchange_map[affected_stat] = int(change);
+				while(getline(stat_changes, current_change, ',')){
+					int colon = current_change.find(':');
+					std::string affected_stat = current_change.substr(1, colon - 1);
+					int change = std::stoi(current_change.substr(colon + 1));
+					statchange_map[affected_stat] = int(change);
+				}
 				origin.options.push_back(option(line.substr(close_paren + 1),destination, statchange_map));
 			}else{
 				origin.options.push_back(option(line.substr(close_bracket + 1),destination));
@@ -201,13 +205,14 @@ void run_Story(game_data data){
 		next_paragraph = get_destination(data, next_paragraph);
 	}
 	if (!chosen_option.stat_change_map.empty()){
-		auto stat_change = chosen_option.stat_change_map.begin();
-		std::string attribute = stat_change->first;
+		for (std::map<std::string, int>::iterator it = chosen_option.stat_change_map.begin(); it != chosen_option.stat_change_map.end(); it++) {
+        std::string attribute = it->first;
 		std::cout << "Attribute check: " << attribute << '\n'; //TESTING PURPOSES
 		std::cout << "Attribute numerator: " << data.player.attributes[attribute] << '\n'; //TESTING PURPOSES
-		int difference = stat_change->second;
+		int difference = it->second;
 		data.player.attributes[attribute] = data.player.attributes[attribute] + difference;
 		std::cout << "New attribute numerator: " << data.player.attributes[attribute] << '\n'; //TESTING PURPOSES
+    	}
 	}
 	data.story_location = next_paragraph;
 	//save_game(data);
