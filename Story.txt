@@ -23,19 +23,22 @@
 
 Start: The world before you 
 
-{Start:Town~}(Rep:1, Weariness:2) Turn left
+{Start:Town~}(Rep:0, Weariness:20) Turn left
 {Start:Wilderness} Turn right
 
 
 [Town~]:
 Villain = Rep:
 Neutral = Rep:0
-Hero = Rep:10
+Hero = Rep:10, Weariness:5
+Exhausted = Rep:5, Weariness:15
 
 Town~Villain: The guards raise their swords as you approach.
 
 Town~Neutral: The guards stand motionless as you pass.
 
 Town~Hero: The guards bow as you stride into the town.
+
+Town~Exhausted: As the guards come into view, your eyesight dims before everything goes dark.
 
 Wilderness: The grasses roll across the hills before you.

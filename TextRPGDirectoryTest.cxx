@@ -167,15 +167,24 @@ std::string get_destination(game_data data, std::string par_nexus){
     std::string line;
     std::stringstream text(data.story[par_nexus].text);
 	auto attributes = data.player.attributes;
-    while (getline(text, line)){
+    while (getline(text, line) && !line.empty()){
         int equal = line.find('=');
 		int colon = line.find(':');
 		std::string dest_ver = line.substr(0,equal - 1);
 
 		if (line.substr(colon + 1) != ""){
-			std::string x = line.substr(equal + 2,colon - equal - 2);
-			int v = std::stoi(line.substr(colon + 1));
-			if (attributes[x] >= v){
+			std::stringstream checks(line.substr(equal + 1));
+			std::string c;
+			std::string stat;
+			int val;
+			bool viable = true;
+			while (viable && std::getline(checks, c, ',')){
+				int ccolon = c.find(':');
+				stat = c.substr(1, ccolon - 1);
+				val = std::stoi(c.substr(ccolon + 1));
+				viable = attributes[stat] >= val;
+			}
+			if (viable){
             	destination = par_nexus + dest_ver;
         	}
 		}else{
@@ -201,9 +210,6 @@ void run_Story(game_data data){
 	
 	option chosen_option = p.options[decision - 1];
 	std::string next_paragraph = chosen_option.dest_label;
-	if (next_paragraph[next_paragraph.length() - 1] == '~'){
-		next_paragraph = get_destination(data, next_paragraph);
-	}
 	if (!chosen_option.stat_change_map.empty()){
 		for (const std::pair it : chosen_option.stat_change_map) {
         std::string attribute = it.first;
@@ -213,6 +219,9 @@ void run_Story(game_data data){
 		data.player.attributes[attribute] = data.player.attributes[attribute] + difference;
 		std::cout << "New attribute numerator: " << data.player.attributes[attribute] << '\n'; //TESTING PURPOSES
     	}
+	}
+	if (next_paragraph[next_paragraph.length() - 1] == '~'){
+		next_paragraph = get_destination(data, next_paragraph);
 	}
 	data.story_location = next_paragraph;
 	//save_game(data);
@@ -224,6 +233,7 @@ load_game(const std::string &writtenStory){
 	character player;
     player.lineage = randomize_lineage();
 	player.attributes["Rep"] = 0; //TESTING PURPOSES
+	player.attributes["Weariness"] = 0; //TESTING PURPOSES
 	auto story = parse_story(writtenStory);
 	game_data data(story, "Start", player);
 
