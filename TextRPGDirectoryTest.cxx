@@ -171,9 +171,9 @@ std::string get_destination(game_data data, std::string par_nexus){
         int equal = line.find('=');
 		int colon = line.find(':');
 		std::string dest_ver = line.substr(0,equal - 1);
-		std::string x = line.substr(equal + 2,colon - equal - 2);
 
 		if (line.substr(colon + 1) != ""){
+			std::string x = line.substr(equal + 2,colon - equal - 2);
 			int v = std::stoi(line.substr(colon + 1));
 			if (attributes[x] >= v){
             	destination = par_nexus + dest_ver;
@@ -205,11 +205,11 @@ void run_Story(game_data data){
 		next_paragraph = get_destination(data, next_paragraph);
 	}
 	if (!chosen_option.stat_change_map.empty()){
-		for (std::map<std::string, int>::iterator it = chosen_option.stat_change_map.begin(); it != chosen_option.stat_change_map.end(); it++) {
-        std::string attribute = it->first;
+		for (const std::pair it : chosen_option.stat_change_map) {
+        std::string attribute = it.first;
 		std::cout << "Attribute check: " << attribute << '\n'; //TESTING PURPOSES
 		std::cout << "Attribute numerator: " << data.player.attributes[attribute] << '\n'; //TESTING PURPOSES
-		int difference = it->second;
+		int difference = it.second;
 		data.player.attributes[attribute] = data.player.attributes[attribute] + difference;
 		std::cout << "New attribute numerator: " << data.player.attributes[attribute] << '\n'; //TESTING PURPOSES
     	}
