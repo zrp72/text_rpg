@@ -1,15 +1,15 @@
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <vector>
 #include <map>
-#include <stdexcept>
 #include <limits>
 #include <random>
-#include <fstream>
+#include <filesystem>
 
+#include <stdexcept> //may not be needed
 #include <cerrno>
 #include <cstring>
-#include <filesystem>
 
 void 
 set_directory (std::string original_filepath){
@@ -54,7 +54,6 @@ class option {
 	std::string prompt;
 	std::string dest_label;
 
-	option():prompt(""), dest_label(""){};
 	option(std::string p, std::string dest) : prompt(p), dest_label(dest) {}
 };
 
@@ -149,20 +148,25 @@ std::string get_destination(game_data data, std::string par_nexus){
     std::string destination;
     std::string line;
     std::stringstream text(data.story[par_nexus].text);
-	std::map<std::string, int> attributes;
-	attributes["Rep"] = int(1);
+	auto attributes = data.player.attributes;
     while (getline(text, line)){
         int equal = line.find('=');
 		int colon = line.find(':');
 		std::string dest_ver = line.substr(0,equal - 1);
 		std::string x = line.substr(equal + 2,colon - equal - 2);
-		int v = std::stoi(line.substr(colon + 1));
 
-        if (attributes[x] >= v){
-            destination = par_nexus + dest_ver;
-        }
+		if (line.substr(colon + 1) != ""){
+			int v = std::stoi(line.substr(colon + 1));
+			if (attributes[x] >= v){
+            	destination = par_nexus + dest_ver;
+        	}
+		}else{
+			destination = par_nexus + dest_ver;
+		}
+
+		std::cout << __LINE__ << '\n';
     }
-	std::cout << destination;
+	std::cout << destination; //TESTING PURPOSES
     return destination;
 }
 
@@ -173,8 +177,12 @@ void run_Story(game_data data){
 		p.display();
 		decision = get_valid_choice(p.options.size());
 	}
+	
+		std::cout << __LINE__ << '\n';
 	auto next_paragraph = p.options[decision - 1].dest_label;
 	if (next_paragraph[next_paragraph.length() - 1] == '~'){
+		
+		std::cout << __LINE__ << '\n';
 		next_paragraph = get_destination(data, next_paragraph);
 	}
 	data.story_location = next_paragraph;
@@ -185,8 +193,10 @@ game_data
 load_game(const std::string &writtenStory){
 	character player;
     player.lineage = randomize_lineage();
+	player.attributes["Rep"] = -1; //TESTING PURPOSES
 	auto story = parse_story(writtenStory);
 	game_data data(story, "Start", player);
+	std::cout << "Attribute map: " << player.attributes["Rep"] << '\n'; //TESTING PURPOSES
 
 	return data;
 }
@@ -207,7 +217,7 @@ int main(int argc, char** argv){
 		game_data loaded_data = load_game(story.str());
 		run_Story(loaded_data);
 	} catch (std::exception &e) {
-		std::cerr << e.what() << '\n';
+		std::cerr << "err: " << e.what() << '\n';
 		return 1;
 	}
 	return 0;

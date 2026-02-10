@@ -28,7 +28,7 @@ Start: The world before you
 
 
 [Town~]:
-Villian = Rep:
+Villain = Rep:
 Neutral = Rep:0
 Hero = Rep:10
 
@@ -36,6 +36,6 @@ Town~Villain: TestSuccess
 
 Town~Neutral: TestSuccess
 
-TownHero: TestSuccess
+Town~Hero: TestSuccess
 
 Wilderness: The grasses roll across the hills before you.
