@@ -12,9 +12,8 @@
 #include <cstring>
 
 void 
-set_directory (std::string original_filepath){
-	int last_slash = original_filepath.rfind('\\');
-	std::string story_directory = original_filepath.substr(0,last_slash);
+set_directory (std::filesystem::path original_filepath){
+	std::filesystem::path story_directory = original_filepath.parent_path();
 	//std::cout << "Original directory: " << std::filesystem::current_path() << '\n';
 	//std::cout << "Story directory: " << story_directory << '\n';
 	std::filesystem::current_path(story_directory);
@@ -211,7 +210,7 @@ void run_Story(game_data data){
 	option chosen_option = p.options[decision - 1];
 	std::string next_paragraph = chosen_option.dest_label;
 	if (!chosen_option.stat_change_map.empty()){
-		for (const std::pair it : chosen_option.stat_change_map) {
+		for (const std::pair<std::string, int> &it : chosen_option.stat_change_map) {
         std::string attribute = it.first;
 		std::cout << "Attribute check: " << attribute << '\n'; //TESTING PURPOSES
 		std::cout << "Attribute numerator: " << data.player.attributes[attribute] << '\n'; //TESTING PURPOSES
