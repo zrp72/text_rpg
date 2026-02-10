@@ -15,8 +15,8 @@ void
 set_directory (std::string original_filepath){
 	int last_slash = original_filepath.rfind('\\');
 	std::string story_directory = original_filepath.substr(0,last_slash);
-	std::cout << "Original directory: " << std::filesystem::current_path() << '\n';
-	std::cout << "Story directory: " << story_directory << '\n';
+	//std::cout << "Original directory: " << std::filesystem::current_path() << '\n';
+	//std::cout << "Story directory: " << story_directory << '\n';
 	std::filesystem::current_path(story_directory);
 }
 
@@ -163,10 +163,7 @@ std::string get_destination(game_data data, std::string par_nexus){
 		}else{
 			destination = par_nexus + dest_ver;
 		}
-
-		std::cout << __LINE__ << '\n';
     }
-	std::cout << destination; //TESTING PURPOSES
     return destination;
 }
 
@@ -178,11 +175,8 @@ void run_Story(game_data data){
 		decision = get_valid_choice(p.options.size());
 	}
 	
-		std::cout << __LINE__ << '\n';
 	auto next_paragraph = p.options[decision - 1].dest_label;
 	if (next_paragraph[next_paragraph.length() - 1] == '~'){
-		
-		std::cout << __LINE__ << '\n';
 		next_paragraph = get_destination(data, next_paragraph);
 	}
 	data.story_location = next_paragraph;
@@ -193,10 +187,9 @@ game_data
 load_game(const std::string &writtenStory){
 	character player;
     player.lineage = randomize_lineage();
-	player.attributes["Rep"] = -1; //TESTING PURPOSES
+	player.attributes["Rep"] = 0; //TESTING PURPOSES
 	auto story = parse_story(writtenStory);
 	game_data data(story, "Start", player);
-	std::cout << "Attribute map: " << player.attributes["Rep"] << '\n'; //TESTING PURPOSES
 
 	return data;
 }

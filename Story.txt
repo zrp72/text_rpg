@@ -32,10 +32,10 @@ Villain = Rep:
 Neutral = Rep:0
 Hero = Rep:10
 
-Town~Villain: TestSuccess
+Town~Villain: The guards raise their swords as you approach.
 
-Town~Neutral: TestSuccess
+Town~Neutral: The guards stand motionless as you pass.
 
-Town~Hero: TestSuccess
+Town~Hero: The guards bow as you stride into the town.
 
 Wilderness: The grasses roll across the hills before you.
