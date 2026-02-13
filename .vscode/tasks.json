@@ -3,13 +3,16 @@
         {
             "type": "cppbuild",
             "label": "C/C++: g++.exe build active file",
-            "command": "C:\\msys64\\ucrt64\\bin\\g++.exe",
+            "command": "C:\\Users\\purse\\Documents\\Projects\\C++ Projects\\msys64\\ucrt64\\bin\\g++.exe",
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
                 "${file}",
                 "-o",
-                "${fileDirname}\\${fileBasenameNoExtension}.exe"
+                "${fileDirname}\\${fileBasenameNoExtension}.exe",
+                "-IC:/Users/purse/Documents/Projects/C++ Projects/SDL/x86_64-w64-mingw32/include",
+                "-LC:/Users/purse/Documents/Projects/C++ Projects/SDL/x86_64-w64-mingw32/lib",
+                "-lSDL3"
             ],
             "options": {
                 "cwd": "${fileDirname}"

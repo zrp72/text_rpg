@@ -21,7 +21,7 @@ set_directory (std::filesystem::path original_filepath){
 
 std::string randomize_lineage(){
     std::string lineage = "";
-    static const std::vector<std::string> options = {
+    const std::vector<std::string> options = {
         "Human",
         "Elf",
         "Dwarf",
@@ -117,21 +117,28 @@ parse_story(const std::string &writtenStory){
 			std::string source = line.substr(1,colon - 1);
 			std::string destination = line.substr(colon + 1,close_bracket - colon - 1);
 			paragraph &origin = story_map[source];
-			if (line.substr(close_bracket + 1, 1) == "("){
+
+			if (line.substr(close_bracket + 1, 1) != "("){
+				origin.options.push_back(option(line.substr(close_bracket + 1),destination));
+			}else{
 				int open_paren = line.find('(');
 				int close_paren = line.find(')');
 				std::stringstream stat_changes(line.substr(open_paren, close_paren - open_paren));
 				std::string current_change;
 				std::map<std::string, int> statchange_map;
+
 				while(getline(stat_changes, current_change, ',')){
-					int colon = current_change.find(':');
-					std::string affected_stat = current_change.substr(1, colon - 1);
-					int change = std::stoi(current_change.substr(colon + 1));
+					int operation = current_change.find('+');
+
+					if (operation == std::string::npos){
+						operation = current_change.find('-');
+					}
+
+					std::string affected_stat = current_change.substr(1, operation - 2);
+					int change = std::stoi(current_change.substr(operation));
 					statchange_map[affected_stat] = int(change);
 				}
-				origin.options.push_back(option(line.substr(close_paren + 1),destination, statchange_map));
-			}else{
-				origin.options.push_back(option(line.substr(close_bracket + 1),destination));
+				origin.options.push_back(option(line.substr(close_paren + 1),destination, statchange_map));	
 			}
 		}
 			break;
