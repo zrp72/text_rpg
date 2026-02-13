@@ -42,10 +42,8 @@ class character {
     public: 
 	std::map<std::string, int> attributes;
     std::string lineage;
-    std::string alignment;
-    std::string reputation;
 
-    character():attributes(), lineage(""), alignment(""), reputation(""){};
+    character():attributes(), lineage(""){};
 };
 
 class option {
@@ -67,7 +65,7 @@ class paragraph{
 
 	paragraph() : text(""), stat_change_map(), options(){};
 	paragraph(std::string t) : text(t){}
-	paragraph(std::string t, std::map<std::string, int> scm) : text(t), stat_change_map(scm){};
+	paragraph(std::string t, auto scm) : text(t), stat_change_map(scm){};
 
 	void display() {
 		std::cout << text << '\n';
@@ -87,6 +85,24 @@ class game_data {
 	game_data(std::map<std::string, paragraph> s, std::string l, character p) : story(s), story_location(l), player(p){};
 };
 
+std::map<std::string, int>
+create_stat_change_map(std::string stat_changes){
+	std::stringstream s(stat_changes);
+	std::string current_change;
+	std::map<std::string, int> statchange_map;
+
+	while(std::getline(s, current_change, ',')){
+		int operation = current_change.find('+');
+		if (operation == std::string::npos){
+			operation = current_change.find('-');
+		}
+		std::string affected_stat = current_change.substr(1, operation - 2);
+		int change = std::stoi(current_change.substr(operation));
+		statchange_map[affected_stat] = int(change);
+	}
+	return statchange_map;
+}
+
 std::map<std::string, paragraph> 
 parse_story(const std::string &writtenStory){
 	std::map<std::string, paragraph> story_map;
@@ -95,8 +111,6 @@ parse_story(const std::string &writtenStory){
 
 	while(std::getline(story, line)){
 		int colon = line.find(':');
-		std::stringstream stat_changes;
-		std::string current_change;
 		std::map<std::string, int> statchange_map;
 
 		if (line.length() == 0 || line.substr(0,2) == "//"){
@@ -119,16 +133,8 @@ parse_story(const std::string &writtenStory){
 			}else{
 				int open_paren = line.find('(');
 				int close_paren = line.find(')');
-				stat_changes << line.substr(open_paren, close_paren - open_paren);
-				while(getline(stat_changes, current_change, ',')){
-					int operation = current_change.find('+');
-					if (operation == std::string::npos){
-						operation = current_change.find('-');
-					}
-					std::string affected_stat = current_change.substr(1, operation - 2);
-					int change = std::stoi(current_change.substr(operation));
-					statchange_map[affected_stat] = int(change);
-				}
+				std::string stat_changes = line.substr(open_paren, close_paren - open_paren);
+				statchange_map = create_stat_change_map(stat_changes);
 				origin.options.push_back(option(line.substr(close_paren + 1),destination, statchange_map));	
 			}
 		}
@@ -143,36 +149,17 @@ parse_story(const std::string &writtenStory){
 				if (line.substr(colon + 1, 1) != "("){
 					text = line.substr(colon + 2);
 					
-					while (std::getline(story, line) && !line.empty()){
-						text+= '\n' + line;
-					}
-
 				}else{
 
 					int open_paren = line.find('(');
 					int close_paren = line.find(')');
-					stat_changes << line.substr(open_paren, close_paren - open_paren);
-
-					while(getline(stat_changes, current_change, ',')){
-						int operation = current_change.find('+');
-						if (operation == std::string::npos){
-							operation = current_change.find('-');
-						}
-						std::string affected_stat = current_change.substr(1, operation - 2);
-						int change = std::stoi(current_change.substr(operation));
-						statchange_map[affected_stat] = int(change);
-					}
-
+					std::string stat_changes = line.substr(open_paren, close_paren);
+					statchange_map = create_stat_change_map(stat_changes);
 					text = line.substr(close_paren + 2);
-
-					while (std::getline(story, line) && !line.empty()){
+				}
+				while (std::getline(story, line) && !line.empty()){
 						text+= '\n' + line;
 					}
-					story_map[tag] = paragraph(text, statchange_map);
-					continue;
-				}
-
-				
 			//nexus
 			}else{
 				int close_bracket = line.find(']');
@@ -181,7 +168,7 @@ parse_story(const std::string &writtenStory){
 				text+= line + '\n';
 				}
 			}
-			story_map[tag] = paragraph(text);
+			story_map[tag] = paragraph(text, statchange_map);
 		}
 		}
 	}
