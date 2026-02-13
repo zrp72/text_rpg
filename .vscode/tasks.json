@@ -6,6 +6,7 @@
             "command": "C:\\Users\\purse\\Documents\\Projects\\C++ Projects\\msys64\\ucrt64\\bin\\g++.exe",
             "args": [
                 "-fdiagnostics-color=always",
+                "-std=c++26",
                 "-g",
                 "${file}",
                 "-o",

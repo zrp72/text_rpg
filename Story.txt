@@ -6,7 +6,7 @@
 //For options, within curly brackets, write the source and destination paragraphs seperated by a colon.
 //Outside the brackets, write the prompt for the option on the same line.
 //To direct to a nexus, add a ~ at the end of the destination tag.
-//Example: "{Town:Store}"
+//Example: "{Town:Store}(Rep +5, Weariness +5)"
 
 //For a nexus, within square brackets, write the destination paragraph with a ~ at the end, followed by a colon outside the brackets.
 //Following lines will be the destination variations followed by the attribute condition. 
@@ -23,7 +23,7 @@
 
 Start: The world before you 
 
-{Start:Town~}(Rep +5, Weariness -20) Turn left
+{Start:Town~}(Rep -100) Turn left
 {Start:Wilderness} Turn right
 
 
@@ -33,7 +33,8 @@ Neutral = Rep:0
 Hero = Rep:10, Weariness:5
 Exhausted = Rep:5, Weariness:15
 
-Town~Villain:(+5 Rep) The guards raise their swords as you approach.
+Town~Villain:(Rep +5) The guards raise their swords as you approach.
+Who goes there?
 
 Town~Neutral: The guards stand motionless as you pass.
 
