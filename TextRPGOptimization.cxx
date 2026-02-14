@@ -98,7 +98,8 @@ class game_data {
 	std::map<std::string, items> items;
 	character player;
 
-	game_data(std::map<std::string, paragraph> s, std::string l, character p) : story(s), story_location(l), player(p){};
+	game_data(std::map<std::string, paragraph> s, std::string l, character p) 
+	: story(s), story_location(l), player(p){};
 };
 
 std::map<std::string, int>
@@ -132,7 +133,7 @@ create_stat_map(std::string changes){
             }
             std::string affected_stat = current_change.substr(1, operation - 2);
             int change = std::stoi(current_change.substr(operation));
-            statchange_map[affected_stat] = int(change);
+            statchange_map[affected_stat] = change;
     }
 	return statchange_map;
 }
@@ -158,7 +159,7 @@ initialize_stat_inv_changes(std::string changes){
 }
 
 void
-attach_change_maps(std::array<std::map<std::string, int>, 2> maps, std::string id, auto &story_map){
+attach_change_maps(auto maps, std::string id, auto &story_map){
 	if (id.substr(0,3) == "Opt"){
         int open_paren = id.find('(');
         int close_paren = id.find(')');
@@ -180,15 +181,17 @@ parse_option(auto &story_map, std::string line){
 	std::string destination = line.substr(colon + 1,close_bracket - colon - 1);
 	std::string prompt;
 	paragraph &origin = story_map[source];
-	std::string stat_item_notation = line.substr(close_bracket + 1, 1);
     std::string stat_inv_changes;
 
-	if (stat_item_notation == " "){
+	switch (line[close_bracket + 1]){
+	case ' ':{
 		prompt = line.substr(close_bracket + 1);
-	}else if (stat_item_notation == "("){
-        int open_paren = line.find('(');
+	}
+	break;
+	case '(':{
+		int open_paren = line.find('(');
 		int close_paren = line.find(')');
-        if (line.substr(close_paren + 1, 1) != "["){
+        if (line[close_paren + 1] != '['){
             prompt = line.substr(close_paren + 1);
             stat_inv_changes = line.substr(open_paren, close_paren - open_paren);
         }else{
@@ -196,11 +199,14 @@ parse_option(auto &story_map, std::string line){
             prompt = line.substr(close_square + 1);
             stat_inv_changes = line.substr(open_paren, close_square - open_paren);
         }
-	}else if (stat_item_notation == "["){
-        int open_square = line.find('[');
+	}
+	break;
+	case '[':{
+		int open_square = line.find('[');
 		int close_square = line.find(']');
         prompt = line.substr(close_square + 1);
         stat_inv_changes = line.substr(open_square, close_square - open_square);
+	}
 	}
     origin.options.push_back(option(prompt, destination));
 
@@ -308,7 +314,9 @@ void change_stats(game_data &data, auto stat_change_map){
 	for (const std::pair<std::string, int> &it : stat_change_map) {
         std::string stat = it.first;
 		int difference = it.second;
+		std::cout << stat << ": " << data.player.attributes[stat] << '\n'; 
 		data.player.attributes[stat] = data.player.attributes[stat] + difference;
+		std::cout << stat << ": " << data.player.attributes[stat] << '\n'; 
 	}
 }
 
@@ -322,7 +330,7 @@ std::string get_destination(game_data &data, std::string par_nexus){
 		int colon = line.find(':');
 		std::string dest_ver = line.substr(0,equal - 1);
 
-		if (line.substr(colon + 1, 1) != ""){
+		if (line[colon + 1] != '-'){
 			std::stringstream text(line.substr(equal + 1));
 			std::string c;
 			bool viable = true;
