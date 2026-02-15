@@ -1,0 +1,10 @@
+_________________________
+ID: Longsword
+Type: Sword
+
+Stats:
+Strength +1,
+Agility +2
+
+Abilities:
+_________________________

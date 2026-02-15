@@ -102,20 +102,31 @@ class game_data {
 	: story(s), story_location(l), player(p){};
 };
 
+int
+find_operation(std::string line){
+	std::map<int, char> operations = {
+		{0, '-'}
+	};
+	int op_pos = 0;
+	int operation = line.find('+');
+    while (operation == std::string::npos){
+        operation = line.find(operations[op_pos]);
+		op_pos++;
+    }
+	return operation;
+}
+
 std::map<std::string, int>
 create_item_map(std::string changes){
 	std::stringstream i(changes);
     std::string current_item;
 	std::map<std::string, int> item_map;
     while(std::getline(i, current_item, ',')){
-
-        char op = current_item[2];
-        std::string item = current_item.substr(3);
-		if (op == '+'){
-			item_map[item] = + 1;
-		} else {
-			item_map[item] = - 1;
-		}
+		int operation = find_operation(current_item);
+		int item_pos = current_item.rfind(' ') + 1;
+		int amount = std::stoi(current_item.substr(operation, item_pos - 1 - operation));
+        std::string item = current_item.substr(item_pos);
+		item_map[item] = amount;
     }
 	return item_map;
 }
@@ -126,14 +137,10 @@ create_stat_map(std::string changes){
     std::string current_change;
 	std::map<std::string, int> statchange_map;
     while(std::getline(s, current_change, ',')){
-
-            int operation = current_change.find('+');
-            if (operation == std::string::npos){
-                operation = current_change.find('-');
-            }
-            std::string affected_stat = current_change.substr(1, operation - 2);
-            int change = std::stoi(current_change.substr(operation));
-            statchange_map[affected_stat] = change;
+        int operation = find_operation(current_change);
+        std::string affected_stat = current_change.substr(1, operation - 2);
+        int change = std::stoi(current_change.substr(operation));
+        statchange_map[affected_stat] = change;
     }
 	return statchange_map;
 }
