@@ -70,7 +70,7 @@ class paragraph{
 	bool has_been = false;
 	bool loopable;
 
-	paragraph() : text(""), stat_change_map(), items (), options(), has_been(), loopable(){};
+	paragraph() : text(""){};
 	paragraph(std::string t) : text(t){}
 	paragraph(std::string t, auto scm) : text(t), stat_change_map(scm){};
 

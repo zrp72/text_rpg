@@ -70,9 +70,8 @@ class paragraph{
 	bool has_been = false;
 	bool loopable;
 
-	paragraph() : text(""), stat_change_map(), items (), options(), has_been(), loopable(){};
+	paragraph() : text(""){}
 	paragraph(std::string t) : text(t){}
-	paragraph(std::string t, auto scm) : text(t), stat_change_map(scm){};
 
 	void display() {
 		std::cout << text << '\n';
@@ -83,23 +82,25 @@ class paragraph{
 	}
 };
 
-class items {
+class item {
 	public:
+	std::string ID;
 	std::string item_type;
-	std::vector<int> stat_bonus;
+	std::map<std::string, int> stat_bonus;
 
-	items() : item_type(""), stat_bonus(){}
+	item(): ID(""){}
+	item(std::string i) : ID(i){}
 };
 
 class game_data {
 	public:
 	std::map<std::string, paragraph> story;
 	std::string story_location;
-	std::map<std::string, items> items;
+	std::map<std::string, item> items;
 	character player;
 
-	game_data(std::map<std::string, paragraph> s, std::string l, character p) 
-	: story(s), story_location(l), player(p){};
+	game_data(auto s, std::string l, auto i, character p) 
+	: story(s), story_location(l), items(i), player(p){};
 };
 
 int
@@ -138,7 +139,9 @@ create_stat_map(std::string changes){
 	std::map<std::string, int> statchange_map;
     while(std::getline(s, current_change, ',')){
         int operation = find_operation(current_change);
-        std::string affected_stat = current_change.substr(1, operation - 2);
+		size_t line_start = current_change.find_first_not_of(" \t\n\r\f\v([");
+		std::cout << line_start << '\n';
+        std::string affected_stat = current_change.substr(line_start, operation - 2);
         int change = std::stoi(current_change.substr(operation));
         statchange_map[affected_stat] = change;
     }
@@ -233,7 +236,6 @@ parse_story(const std::string &writtenStory){
 
 	while(std::getline(story, line)){
 		int colon = line.find(':');
-		std::map<std::string, int> statchange_map;
 
 		if (line.length() == 0 || line.substr(0,2) == "//"){
 			continue;
@@ -294,7 +296,7 @@ parse_story(const std::string &writtenStory){
 				text+= line + '\n';
 				}
 			}
-			story_map[tag] = paragraph(text, statchange_map);
+			story_map[tag] = paragraph(text);
             if (!stat_inv_changes.empty()){
                 auto maps = initialize_stat_inv_changes(stat_inv_changes);
 				attach_change_maps(maps, tag, story_map);
@@ -303,6 +305,53 @@ parse_story(const std::string &writtenStory){
 		}
 	}
 	return story_map;
+}
+
+item
+read_item_data(std::string &item_data){
+	std::stringstream data(item_data);
+	std::string c;
+	item item;
+	while (getline(data, c) && c[0] != '_'){
+		int colon = c.find(':');
+		if (c.substr(0, 2) == "ID"){
+			item.ID = c.substr(colon + 2);
+		}
+		if(c.substr(0, colon) == "Stats"){
+			std::string changes;
+			std::string line;
+			while (getline(data, line) && !line.empty()){
+				changes+= line;
+			}
+			item.stat_bonus = create_stat_map(changes);
+		}
+	}
+	return item;
+}
+
+std::map<std::string, item>
+load_items(const std::string &itemCatalog){
+	std::stringstream i(itemCatalog);
+	std::string line;
+	std::map<std::string, item> items;
+	while(std::getline(i, line)){
+		if (line.length() == 0 || line.substr(0,2) == "//" || line[0] == '_'){
+			continue;
+		}
+		if (line[0] == ' '){
+			std::cerr << "Item ID has preceding spaces: " 
+            << std::strerror(errno);
+		}
+
+		std::string item_data = line;
+		while (getline(i, line) && line[0] != '_'){
+			item_data+= '\n' + line;
+		}
+		item loaded_item = read_item_data(item_data);
+		items[loaded_item.ID] = loaded_item;
+
+	}
+	return items;
 }
 
 int get_valid_choice(int max){
@@ -392,29 +441,35 @@ void run_Story(game_data &data){
 }
 
 game_data 
-load_game(const std::string &writtenStory){
+load_game(const std::string &writtenStory, const std::string &itemCatalog){
 	character player;
     player.lineage = randomize_lineage();
 	auto story = parse_story(writtenStory);
-	game_data data(story, "Start", player);
+	auto items = load_items(itemCatalog);
+	game_data data(story, "Start", items, player);
 
 	return data;
 }
 
+std::string 
+open_file(std::string path){
+	std::ifstream file(path);
+	if (!file) {
+    	std::cerr << "Error opening file: " 
+            << std::strerror(errno);
+	}
+	std::stringstream read_file;
+	read_file << file.rdbuf();
+	return read_file.str();
+}
 
 int main(int argc, char** argv){
 	set_directory(argv[0]);
 
     try {
-		std::ifstream story_file("Story.txt");
-		if (!story_file) {
-    		std::cerr << "Error opening file: " 
-                  << std::strerror(errno); 
-    		return 1;
-		}
-		std::stringstream story;
-		story << story_file.rdbuf();
-		game_data loaded_data = load_game(story.str());
+		std::string story = open_file("Story.txt");
+		std::string items = open_file("ItemCatalog.txt");
+		game_data loaded_data = load_game(story, items);
 		run_Story(loaded_data);
 	} catch (std::exception &e) {
 		std::cerr << "err: " << e.what() << '\n';
