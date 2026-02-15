@@ -11,6 +11,8 @@
 #include <cerrno>
 #include <cstring>
 
+#define debug(x)  std::cout << x
+
 void 
 set_directory (std::filesystem::path original_filepath){
 	std::filesystem::path story_directory = original_filepath.parent_path();
@@ -44,7 +46,7 @@ class character {
     std::string lineage;
 	std::map<std::string, int> inventory;
 
-    character():attributes(), lineage(""), inventory(){};
+    character():attributes(){};
 };
 
 class option {
@@ -53,7 +55,7 @@ class option {
 	std::string dest_label;
 	std::map<std::string, int> stat_change_map;
     std::map<std::string, int> items;
-	bool chosen = false;
+	bool repeat = false;
 	bool loopable;
 	
 	option(std::string p, std::string dest) : prompt(p), dest_label(dest){}
@@ -67,7 +69,7 @@ class paragraph{
 	std::map<std::string, int> stat_change_map;
     std::map<std::string, int> items;
 	std::vector<option> options;
-	bool has_been = false;
+	bool repeat = false;
 	bool loopable;
 
 	paragraph() : text(""){}
@@ -366,16 +368,6 @@ int get_valid_choice(int max){
 	return decision;
 }
 
-void change_stats(game_data &data, auto stat_change_map){
-	for (const std::pair<std::string, int> &it : stat_change_map) {
-        std::string stat = it.first;
-		int difference = it.second;
-		std::cout << stat << ": " << data.player.attributes[stat] << '\n'; 
-		data.player.attributes[stat] = data.player.attributes[stat] + difference;
-		std::cout << stat << ": " << data.player.attributes[stat] << '\n'; 
-	}
-}
-
 std::string get_destination(game_data &data, std::string par_nexus){
     std::string destination;
     std::string line;
@@ -412,13 +404,32 @@ std::string get_destination(game_data &data, std::string par_nexus){
 	save_data.close();
 }*/
 
+void apply_map_to_player(auto &path, auto change_map){
+	for (const std::pair<std::string, int> &it : change_map) {
+        std::string target = it.first;
+		int difference = it.second;
+		debug(target << ": " << path[target] << '\n'); 
+		path[target] = path[target] + difference;
+		debug(target << ": " << path[target] << '\n'); 
+	}
+}
+
+void
+check_for_change_maps(game_data &data, auto search_target){
+	auto st = search_target;
+	if (!st.stat_change_map.empty() && (!st.repeat || st.repeat && st.loopable)){
+		apply_map_to_player(data.player.attributes, st.stat_change_map);
+	}
+	if (!st.items.empty() && (!st.repeat || st.repeat && st.loopable)){
+		apply_map_to_player(data.player.inventory, st.items);
+	}
+}
+
 void run_Story(game_data &data){
 	auto p = data.story[data.story_location];
 
-	if (!p.stat_change_map.empty() && (!p.has_been || p.has_been && p.loopable)){
-		change_stats(data, p.stat_change_map);
-	}
-
+	check_for_change_maps(data, p);
+	
 	int decision = -1;
 	while (decision == -1){;
 		p.display();
@@ -428,13 +439,12 @@ void run_Story(game_data &data){
 	option c = p.options[decision - 1];
 	std::string next_paragraph = c.dest_label;
 
-	if (!c.stat_change_map.empty() && (!c.chosen || c.chosen && c.loopable)){
-		change_stats(data, c.stat_change_map);
-	}
+	check_for_change_maps(data, c);
 
 	if (next_paragraph[next_paragraph.length() - 1] == '~'){
 		next_paragraph = get_destination(data, next_paragraph);
 	}
+
 	data.story_location = next_paragraph;
 	//save_game(data);
 	run_Story(data);
