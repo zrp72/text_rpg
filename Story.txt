@@ -12,7 +12,7 @@ Start: The world before you
 
 
 [Town~]:
-Villain = Rep:-
+Villain = Rep:
 Neutral = Rep:0
 Hero = Rep:10
 Exhausted = Rep:5, Weariness:15

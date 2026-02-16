@@ -13,33 +13,6 @@
 
 #define debug(x)  std::cout << x
 
-void 
-set_directory (std::filesystem::path original_filepath){
-	std::filesystem::path story_directory = original_filepath.parent_path();
-	//std::cout << "Original directory: " << std::filesystem::current_path() << '\n';
-	//std::cout << "Story directory: " << story_directory << '\n';
-	std::filesystem::current_path(story_directory);
-}
-
-std::string randomize_lineage(){
-    std::string lineage = "";
-    const std::vector<std::string> options = {
-        "Human",
-        "Elf",
-        "Dwarf",
-        "Orc",
-        "Halfling",
-        "Tiefling",
-        "Gnome"
-    };
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<std::size_t> dist(0, options.size() - 1);
-    lineage = options[dist(gen)];
-	std::cout << "Lineage: " << lineage << '\n';
-    return lineage;
-}
-
 class character {
     public: 
 	std::map<std::string, int> attributes;
@@ -54,23 +27,18 @@ class option {
 	std::string prompt;
 	std::string dest_label;
 	std::map<std::string, int> stat_change_map;
-    std::map<std::string, int> items;
-	bool repeat = false;
-	bool loopable;
+    std::map<std::string, int> item_change_map;
 	
 	option(std::string p, std::string dest) : prompt(p), dest_label(dest){}
-	option(std::string p, std::string dest, bool loop) 
-	: prompt(p), dest_label(dest), loopable(loop){}
 };
 
 class paragraph{
 	public:
 	std::string text;
 	std::map<std::string, int> stat_change_map;
-    std::map<std::string, int> items;
+    std::map<std::string, int> item_change_map;
 	std::vector<option> options;
-	bool repeat = false;
-	bool loopable;
+	int visits; //for nexuses
 
 	paragraph() : text(""){}
 	paragraph(std::string t) : text(t){}
@@ -105,6 +73,33 @@ class game_data {
 	: story(s), story_location(l), items(i), player(p){};
 };
 
+void 
+set_directory (std::filesystem::path original_filepath){
+	std::filesystem::path story_directory = original_filepath.parent_path();
+	//std::cout << "Original directory: " << std::filesystem::current_path() << '\n';
+	//std::cout << "Story directory: " << story_directory << '\n';
+	std::filesystem::current_path(story_directory);
+}
+
+std::string randomize_lineage(){
+    std::string lineage = "";
+    const std::vector<std::string> options = {
+        "Human",
+        "Elf",
+        "Dwarf",
+        "Orc",
+        "Halfling",
+        "Tiefling",
+        "Gnome"
+    };
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<std::size_t> dist(0, options.size() - 1);
+    lineage = options[dist(gen)];
+	std::cout << "Lineage: " << lineage << '\n';
+    return lineage;
+}
+
 int
 find_operation(std::string line){
 	std::map<int, char> operations = {
@@ -126,7 +121,7 @@ create_item_map(std::string changes){
 	std::map<std::string, int> item_map;
     while(std::getline(i, current_item, ',')){
 		int operation = find_operation(current_item);
-		int item_pos = current_item.rfind(' ') + 1;
+		int item_pos = current_item.find(' ', operation) + 1;
 		int amount = std::stoi(current_item.substr(operation, item_pos - 1 - operation));
         std::string item = current_item.substr(item_pos);
 		item_map[item] = amount;
@@ -141,7 +136,7 @@ create_stat_map(std::string changes){
 	std::map<std::string, int> statchange_map;
     while(std::getline(s, current_change, ',')){
         int operation = find_operation(current_change);
-		size_t line_start = current_change.find_first_not_of(" \t\n\r\f\v([");
+		size_t line_start = current_change.find_first_not_of(" (");
 		std::cout << line_start << '\n';
         std::string affected_stat = current_change.substr(line_start, operation - 2);
         int change = std::stoi(current_change.substr(operation));
@@ -178,10 +173,10 @@ attach_change_maps(auto maps, std::string id, auto &story_map){
         std::string source = id.substr(open_paren + 1, close_paren - open_paren - 1);
         int opt_num = std::stoi(id.substr(close_paren + 1));
         story_map[source].options[opt_num - 1].stat_change_map = maps[0];
-        story_map[source].options[opt_num - 1].items = maps[1];
+        story_map[source].options[opt_num - 1].item_change_map = maps[1];
     }else{
         story_map[id].stat_change_map = maps[0];
-        story_map[id].items = maps[1];
+        story_map[id].item_change_map = maps[1];
 	}
 }
 
@@ -378,7 +373,9 @@ std::string get_destination(game_data &data, std::string par_nexus){
 		int colon = line.find(':');
 		std::string dest_ver = line.substr(0,equal - 1);
 
-		if (line[colon + 1] != '-'){
+		if (line.size() == colon + 1 || line[colon + 1] == ' '){
+			destination = par_nexus + dest_ver;
+		}else{
 			std::stringstream text(line.substr(equal + 1));
 			std::string c;
 			bool viable = true;
@@ -391,8 +388,6 @@ std::string get_destination(game_data &data, std::string par_nexus){
 			if (viable){
             	destination = par_nexus + dest_ver;
         	}
-		}else{
-			destination = par_nexus + dest_ver;
 		}
     }
     return destination;
@@ -417,11 +412,11 @@ void apply_map_to_player(auto &path, auto change_map){
 void
 check_for_change_maps(game_data &data, auto search_target){
 	auto st = search_target;
-	if (!st.stat_change_map.empty() && (!st.repeat || st.repeat && st.loopable)){
+	if (!st.stat_change_map.empty()){
 		apply_map_to_player(data.player.attributes, st.stat_change_map);
 	}
-	if (!st.items.empty() && (!st.repeat || st.repeat && st.loopable)){
-		apply_map_to_player(data.player.inventory, st.items);
+	if (!st.item_change_map.empty()){
+		apply_map_to_player(data.player.inventory, st.item_change_map);
 	}
 }
 
