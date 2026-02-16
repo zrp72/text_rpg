@@ -38,7 +38,7 @@ class paragraph{
 	std::map<std::string, int> stat_change_map;
     std::map<std::string, int> item_change_map;
 	std::vector<option> options;
-	int visits; //for nexuses
+	int visits = 0; //for nexuses
 
 	paragraph() : text(""){}
 	paragraph(std::string t) : text(t){}
@@ -367,6 +367,7 @@ std::string get_destination(game_data &data, std::string par_nexus){
     std::string destination;
     std::string line;
     std::stringstream text(data.story[par_nexus].text);
+	data.story[par_nexus].visits += 1;
 	auto attributes = data.player.attributes;
     while (getline(text, line) && !line.empty()){
         int equal = line.find('=');
@@ -383,7 +384,11 @@ std::string get_destination(game_data &data, std::string par_nexus){
 				int ccolon = c.find(':');
 				std::string stat = c.substr(1, ccolon - 1);
 				int value = std::stoi(c.substr(ccolon + 1));
+				if (stat == "Visits"){
+					viable = data.story[par_nexus].visits >= value;
+				}else{
 				viable = attributes[stat] >= value;
+				}
 			}
 			if (viable){
             	destination = par_nexus + dest_ver;

@@ -1,5 +1,10 @@
-//Syntax Key:
-
+//Information:
+//Curly brackets contain option source and destination seperated by a colon
+//Nexus ids must end with a tilda "~"
+//Parentheses hold stat changes
+//Square brackets hold inventory changes
+//Colons seperate tags from text for paragraphs and act as a >= for nexuses
+//Using "Visits" as a stat check is unique per nexus and will only check its own visits
 
 
 
@@ -16,9 +21,12 @@ Villain = Rep:
 Neutral = Rep:0
 Hero = Rep:10
 Exhausted = Rep:5, Weariness:15
+Testing = Visits:5
 
-Town~Villain:(Rep +5)[ +1 Obliterator, +1 Healing Potion] The guards raise their swords as you approach.
+Town~Villain:[ +1 Obliterator, +1 Healing Potion] The guards raise their swords as you approach.
 Who goes there?
+
+{Town~Villain:Town~} Loop back
 
 Town~Neutral: The guards stand motionless as you pass.
 
@@ -27,3 +35,5 @@ Town~Hero: The guards bow as you stride into the town.
 Town~Exhausted: As the guards come into view, your eyesight dims before everything goes dark.
 
 Wilderness: The grasses roll across the hills before you.
+
+Town~Testing: It works!
