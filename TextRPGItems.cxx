@@ -18,6 +18,7 @@ class character {
 	std::map<std::string, int> attributes;
     std::string lineage;
 	std::map<std::string, int> inventory;
+	int inventory_size = 30;
 
     character():attributes(){};
 };
@@ -421,6 +422,11 @@ check_for_change_maps(game_data &data, auto search_target){
 		apply_map_to_player(data.player.attributes, st.stat_change_map);
 	}
 	if (!st.item_change_map.empty()){
+		int open_inventory_space = data.player.inventory_size - data.player.inventory.size();
+		int map_size = st.item_change_map.size();
+		if ((open_inventory_space - map_size) < 0){
+			debug("No inventory" << '\n');
+		}
 		apply_map_to_player(data.player.inventory, st.item_change_map);
 	}
 }
