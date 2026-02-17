@@ -72,6 +72,14 @@ class item {
 	item(std::string i) : ID(i){}
 };
 
+class files {
+	public:
+	std::string story;
+	std::string items;
+
+	files(std::string s, std::string i): story(s), items(i){};
+};
+
 class game_data {
 	public:
 	std::map<std::string, paragraph> story;
@@ -383,12 +391,12 @@ get_valid_choice(int max){
 }
 
 std::string
-get_destination(game_data &data, paragraph par_nexus){
+get_destination(game_data &data, paragraph &par_nexus){
 
     std::string destination;
     std::string line;
     std::stringstream text(par_nexus.text);
-	par_nexus.visits += 1;
+	++par_nexus.visits;
 	auto attributes = data.player.attributes;
 
     while (getline(text, line) && !line.empty()){
@@ -407,8 +415,9 @@ get_destination(game_data &data, paragraph par_nexus){
 			while (viable && std::getline(conds, c, ',')){
 				int c_start = line.find_first_not_of(' ');
 				int comparator = c.find(':');
+				int c_end = line.find_last_not_of(' ');
 				std::string stat = c.substr(c_start, comparator - c_start);
-				int value = std::stoi(c.substr(comparator + 1));
+				int value = std::stoi(c.substr(comparator + 1, c_end + 1));
 				if (stat == "Visits"){
 					viable = par_nexus.visits >= value;
 				}else{
@@ -491,11 +500,11 @@ void run_Story(game_data &data){
 }
 
 game_data 
-load_game(const std::string &writtenStory, const std::string &itemCatalog){
+load_game(const files &files){
 	character player;
     player.lineage = randomize_lineage();
-	auto story = parse_story(writtenStory);
-	auto items = load_items(itemCatalog);
+	auto story = parse_story(files.story);
+	auto items = load_items(files.items);
 	game_data data(story, "Start", items, player);
 
 	return data;
@@ -519,7 +528,8 @@ int main(int argc, char** argv){
     try {
 		std::string story = open_file("Story.txt");
 		std::string items = open_file("ItemCatalog.txt");
-		game_data loaded_data = load_game(story, items);
+		files opened_files(story, items);
+		game_data loaded_data = load_game(opened_files);
 		run_Story(loaded_data);
 	} catch (std::exception &e) {
 		std::cerr << "err: " << e.what() << '\n';
