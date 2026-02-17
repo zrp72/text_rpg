@@ -33,16 +33,25 @@ class option {
 	option(std::string p, std::string dest) : prompt(p), dest_label(dest){}
 };
 
+class location {
+	public:
+	std::vector<std::string> dropped_loot;
+};
+
 class paragraph{
 	public:
 	std::string text;
+	std::string location;
 	std::map<std::string, int> stat_change_map;
     std::map<std::string, int> item_change_map;
 	std::vector<option> options;
-	int visits = 0; //for nexuses
+	//for nexuses
+	bool nexus = false;
+	int visits = 0; 
 
 	paragraph() : text(""){}
-	paragraph(std::string t) : text(t){}
+	paragraph(std::string t, std::string l) : text(t), location(l){}
+	paragraph(std::string t, std::string l, bool n) : text(t), location(l), nexus(n){}
 
 	void display() {
 		std::cout << text << '\n';
@@ -103,15 +112,10 @@ std::string randomize_lineage(){
 
 int
 find_operation(std::string line){
-	std::map<int, char> operations = {
-		{0, '-'}
-	};
-	int op_pos = 0;
-	int operation = line.find('+');
-    while (operation == std::string::npos){
-        operation = line.find(operations[op_pos]);
-		op_pos++;
-    }
+	int operation = line.find_first_of("+-");
+	if (operation == std::string::npos){
+		debug("Operator not found: " << '\n');
+	}
 	return operation;
 }
 
@@ -251,11 +255,20 @@ parse_story(const std::string &writtenStory){
 		//Paragraphs and nexuses
 			std::string tag;
 			std::string text;
+			std::string location;
             std::string stat_inv_changes;
+			bool nexus;
 	
 			if (line[0] != '['){
 			//paragraph
 				tag = line.substr(0,colon);
+
+				if (tag.find('(')){
+					int variant = tag.find('(');
+					location = tag.substr(0, variant);
+				}else{
+					location = tag;
+				}
 
 				switch (line[colon + 1]){
 				case ' ':{
@@ -263,21 +276,21 @@ parse_story(const std::string &writtenStory){
 				}
 				break;
 				case '(':{
-					int open_paren = line.find('(');
-                    int close_paren = line.find(')');
+					int open_paren = line.find('(', colon);
+                    int close_paren = line.find(')', colon);
                     if (line[close_paren + 1] != '['){
                         text = line.substr(close_paren + 2);
                         stat_inv_changes = line.substr(open_paren, close_paren - open_paren);
                     }else{
-                        int close_square = line.find(']');
+                        int close_square = line.find(']', colon);
                         text = line.substr(close_square + 2);
                         stat_inv_changes = line.substr(open_paren, close_square - open_paren);
                     }
 				}
 				break;
 				case '[':{
-					int open_square = line.find('[');
-                    int close_square = line.find(']');
+					int open_square = line.find('[', colon);
+                    int close_square = line.find(']', colon);
                     text = line.substr(close_square + 2);
                     stat_inv_changes = line.substr(open_square, close_square - open_square);
 				}
@@ -286,15 +299,19 @@ parse_story(const std::string &writtenStory){
 				while (std::getline(story, line) && !line.empty()){
 						text+= '\n' + line;
 				}
+				story_map[tag] = paragraph(text, location);
 			}else{
 			//nexus
-				int close_bracket = line.find(']');
+				nexus = true;
+				int close_bracket = line.rfind(']', colon);
 				tag = line.substr(1,close_bracket - 1);
+				location = tag;
+
 				while (std::getline(story, line) && !line.empty()){
 				text+= line + '\n';
 				}
+				story_map[tag] = paragraph(text, location, nexus);
 			}
-			story_map[tag] = paragraph(text);
             if (!stat_inv_changes.empty()){
                 auto maps = initialize_stat_inv_changes(stat_inv_changes);
 				attach_change_maps(maps, tag, story_map);
@@ -352,7 +369,8 @@ load_items(const std::string &itemCatalog){
 	return items;
 }
 
-int get_valid_choice(int max){
+int 
+get_valid_choice(int max){
 	int decision;
 	std::cin >> decision;
 	if (std::cin.fail() || decision <= 0 || decision > max){
@@ -364,48 +382,56 @@ int get_valid_choice(int max){
 	return decision;
 }
 
-std::string get_destination(game_data &data, std::string par_nexus){
+std::string
+get_destination(game_data &data, paragraph par_nexus){
+
     std::string destination;
     std::string line;
-    std::stringstream text(data.story[par_nexus].text);
-	data.story[par_nexus].visits += 1;
+    std::stringstream text(par_nexus.text);
+	par_nexus.visits += 1;
 	auto attributes = data.player.attributes;
-    while (getline(text, line) && !line.empty()){
-        int equal = line.find('=');
-		int colon = line.find(':');
-		std::string dest_ver = line.substr(0,equal - 1);
 
-		if (line.size() == colon + 1 || line[colon + 1] == ' '){
-			destination = par_nexus + dest_ver;
+    while (getline(text, line) && !line.empty()){
+		int colon = line.find(':');
+		int line_start = line.find_first_not_of(' ');
+		int dest_tag_end = line.find_first_of(" =", line_start + 1);
+		std::string dest_ver = line.substr(line_start, dest_tag_end);
+
+		if (colon == -1){
+			destination = par_nexus.location + '(' + dest_ver + ')';
 		}else{
-			std::stringstream text(line.substr(equal + 1));
+			int conditions_start = line.find_first_not_of(" =", dest_tag_end);
+			std::stringstream conds(line.substr(conditions_start));
 			std::string c;
 			bool viable = true;
-			while (viable && std::getline(text, c, ',')){
-				int ccolon = c.find(':');
-				std::string stat = c.substr(1, ccolon - 1);
-				int value = std::stoi(c.substr(ccolon + 1));
+			while (viable && std::getline(conds, c, ',')){
+				int c_start = line.find_first_not_of(' ');
+				int comparator = c.find(':');
+				std::string stat = c.substr(c_start, comparator - c_start);
+				int value = std::stoi(c.substr(comparator + 1));
 				if (stat == "Visits"){
-					viable = data.story[par_nexus].visits >= value;
+					viable = par_nexus.visits >= value;
 				}else{
 				viable = attributes[stat] >= value;
 				}
 			}
 			if (viable){
-            	destination = par_nexus + dest_ver;
+            	destination = par_nexus.location + '(' + dest_ver + ')';
         	}
 		}
     }
     return destination;
 }
 
-/*void save_game(game_data active_data){
+/*void 
+save_game(game_data active_data){
 	std::ofstream save_data;
 	save_data.open("save_data");
 	save_data.close();
 }*/
 
-void apply_map_to_player(auto &path, auto change_map){
+void 
+apply_map_to_player(auto &path, auto change_map){
 	for (const std::pair<std::string, int> &it : change_map) {
         std::string target = it.first;
 		int difference = it.second;
@@ -415,24 +441,31 @@ void apply_map_to_player(auto &path, auto change_map){
 	}
 }
 
+void 
+alter_inventory(game_data &data, auto &st){
+	int open_inventory_space = data.player.inventory_size - data.player.inventory.size();
+	int map_size = st.item_change_map.size();
+	if ((open_inventory_space - map_size) < 0){
+		debug("No inventory" << '\n');
+	}
+	apply_map_to_player(data.player.inventory, st.item_change_map);
+}
+
+//handles option and paragraph change maps, so auto is NEEDED
 void
-check_for_change_maps(game_data &data, auto search_target){
-	auto st = search_target;
+check_for_change_maps(game_data &data, auto &search_target){
+	auto &st = search_target;
 	if (!st.stat_change_map.empty()){
 		apply_map_to_player(data.player.attributes, st.stat_change_map);
 	}
 	if (!st.item_change_map.empty()){
-		int open_inventory_space = data.player.inventory_size - data.player.inventory.size();
-		int map_size = st.item_change_map.size();
-		if ((open_inventory_space - map_size) < 0){
-			debug("No inventory" << '\n');
-		}
-		apply_map_to_player(data.player.inventory, st.item_change_map);
+		alter_inventory(data, st);
 	}
 }
 
 void run_Story(game_data &data){
-	auto p = data.story[data.story_location];
+	paragraph p = data.story[data.story_location];
+	debug("Location: " << p.location << '\n');
 
 	check_for_change_maps(data, p);
 	
@@ -443,15 +476,16 @@ void run_Story(game_data &data){
 	}
 	
 	option c = p.options[decision - 1];
-	std::string next_paragraph = c.dest_label;
+	debug("Dest label: " << c.dest_label << '\n');
+	std::string next_paragraph_tag = c.dest_label;
 
 	check_for_change_maps(data, c);
 
-	if (next_paragraph[next_paragraph.length() - 1] == '~'){
-		next_paragraph = get_destination(data, next_paragraph);
+	if (data.story[next_paragraph_tag].nexus){
+		next_paragraph_tag = get_destination(data, data.story[next_paragraph_tag]);
 	}
 
-	data.story_location = next_paragraph;
+	data.story_location = next_paragraph_tag;
 	//save_game(data);
 	run_Story(data);
 }
