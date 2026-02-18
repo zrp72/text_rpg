@@ -15,7 +15,11 @@
 
 class character {
     public: 
-	std::map<std::string, int> attributes;
+	std::map<std::string, int> attributes = {
+		{"Reputation", 0},
+		{"Strenth", 0},
+		{"Agility", 0}
+	};
     std::string lineage;
 	std::map<std::string, int> inventory;
 	int inventory_size = 30;
@@ -416,12 +420,20 @@ get_destination(game_data &data, paragraph &par_nexus){
 				int c_start = line.find_first_not_of(' ');
 				int comparator = c.find(':');
 				int c_end = line.find_last_not_of(' ');
+
 				std::string stat = c.substr(c_start, comparator - c_start);
 				int value = std::stoi(c.substr(comparator + 1, c_end + 1));
+
 				if (stat == "Visits"){
 					viable = par_nexus.visits >= value;
+					continue;
+				}
+
+				if (attributes.contains(stat)){
+					viable = attributes[stat] >= value;
 				}else{
-				viable = attributes[stat] >= value;
+					debug(par_nexus.location << dest_ver << " nexus has unrecognized stat check." << '\n');
+					viable = false;
 				}
 			}
 			if (viable){
