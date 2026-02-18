@@ -27,6 +27,11 @@ class character {
     character():attributes(){};
 };
 
+class location {
+	public:
+	std::vector<std::string> dropped_loot;
+};
+
 class option {
 	public:
 	std::string prompt;
@@ -35,11 +40,6 @@ class option {
     std::map<std::string, int> item_change_map;
 	
 	option(std::string p, std::string dest) : prompt(p), dest_label(dest){}
-};
-
-class location {
-	public:
-	std::vector<std::string> dropped_loot;
 };
 
 class paragraph{
@@ -404,7 +404,7 @@ get_destination(game_data &data, paragraph &par_nexus){
 		int dest_tag_end = line.find_first_of(" =", line_start + 1);
 		std::string dest_ver = line.substr(line_start, dest_tag_end);
 
-		if (colon == -1){
+		if (colon == std::string::npos){
 			destination = par_nexus.location + '(' + dest_ver + ')';
 		}else{
 			int conditions_start = line.find_first_not_of(" =", dest_tag_end);

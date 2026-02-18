@@ -3,8 +3,13 @@
 #include <map>
 
 int main(){
-    std::string current_item = "----";
-    int equal = current_item.find('=');
-    std::cout << equal;
-    return 0;
+    class location{
+        public:
+        std::string a = "!!!";
+
+        location():a(a){}
+    };
+    std::string test = "a";
+    location location;
+    std::cout << location.[test];
 }
