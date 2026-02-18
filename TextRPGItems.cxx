@@ -242,93 +242,88 @@ parse_option(auto &story_map, std::string line){
 	}
 }
 
+void parse_paragraph(std::stringstream &story, std::string line, std::map<std::string, paragraph> &story_map) {
+	int colon = line.find(':');
+	std::string tag = line.substr(0,colon);
+	std::string text;
+	std::string location;
+	std::string stat_inv_changes;
+	if (tag.find('(')) {
+		int variant = tag.find('(');
+		location = tag.substr(0, variant);
+	} else {
+		location = tag;
+	}
+	switch (line[colon + 1]) {
+		case ' ': {
+			text = line.substr(colon + 2);
+		} break;
+		case '(': {
+			int open_paren = line.find('(', colon);
+			int close_paren = line.find(')', colon);
+			if (line[close_paren + 1] != '[') {
+				text = line.substr(close_paren + 2);
+				stat_inv_changes = line.substr(open_paren, close_paren - open_paren);
+			} else {
+				int close_square = line.find(']', colon);
+				text = line.substr(close_square + 2);
+				stat_inv_changes = line.substr(open_paren, close_square - open_paren);
+			}
+		} break;
+		case '[': {
+			int open_square = line.find('[', colon);
+			int close_square = line.find(']', colon);
+			text = line.substr(close_square + 2);
+			stat_inv_changes = line.substr(open_square, close_square - open_square);
+		} break;
+	}
+	while (std::getline(story, line) && !line.empty()) {
+		text += '\n' + line;
+	}
+	story_map[tag] = paragraph(text, location);
+	if (!stat_inv_changes.empty()) {
+		auto maps = initialize_stat_inv_changes(stat_inv_changes);
+		attach_change_maps(maps, tag, story_map);
+	}
+}
+
+void parse_nexus(std::stringstream &story, std::string line, std::map<std::string, paragraph> &story_map) {
+	int colon = line.find(':');
+	bool nexus = true;
+	int close_bracket = line.rfind(']', colon);
+	std::string tag = line.substr(1, close_bracket - 1);
+	std::string location = tag;
+	std::string text;
+	while (std::getline(story, line) && !line.empty()) {
+		text += line + '\n';
+	}
+	story_map[tag] = paragraph(text, location, nexus);
+}
+
 std::map<std::string, paragraph> 
-parse_story(const std::string &writtenStory){
+parse_story(const std::string &writtenStory) {
 	std::map<std::string, paragraph> story_map;
 	std::stringstream story(writtenStory);
 	std::string line;
-
-	while(std::getline(story, line)){
+	while (std::getline(story, line)) {
 		int colon = line.find(':');
-
-		if (line.length() == 0 || line.substr(0,2) == "//"){
+		if (line.length() == 0 || line.substr(0,2) == "//") {
 			continue;
 		}
-		if (colon == std::string::npos){
+		if (colon == std::string::npos) {
 			throw std::runtime_error("Delimiter not found");
 		}
-
-		switch (line[0]){ 
-		case '{':{
-			parse_option(story_map, line);	
-		}
-		break;
-		default:{
-		//Paragraphs and nexuses
-			std::string tag;
-			std::string text;
-			std::string location;
-            std::string stat_inv_changes;
-			bool nexus;
-	
-			if (line[0] != '['){
-			//paragraph
-				tag = line.substr(0,colon);
-
-				if (tag.find('(')){
-					int variant = tag.find('(');
-					location = tag.substr(0, variant);
-				}else{
-					location = tag;
-				}
-
-				switch (line[colon + 1]){
-				case ' ':{
-					text = line.substr(colon + 2);
-				}
-				break;
-				case '(':{
-					int open_paren = line.find('(', colon);
-                    int close_paren = line.find(')', colon);
-                    if (line[close_paren + 1] != '['){
-                        text = line.substr(close_paren + 2);
-                        stat_inv_changes = line.substr(open_paren, close_paren - open_paren);
-                    }else{
-                        int close_square = line.find(']', colon);
-                        text = line.substr(close_square + 2);
-                        stat_inv_changes = line.substr(open_paren, close_square - open_paren);
-                    }
-				}
-				break;
-				case '[':{
-					int open_square = line.find('[', colon);
-                    int close_square = line.find(']', colon);
-                    text = line.substr(close_square + 2);
-                    stat_inv_changes = line.substr(open_square, close_square - open_square);
-				}
-				}
-
-				while (std::getline(story, line) && !line.empty()){
-						text+= '\n' + line;
-				}
-				story_map[tag] = paragraph(text, location);
-			}else{
-			//nexus
-				nexus = true;
-				int close_bracket = line.rfind(']', colon);
-				tag = line.substr(1,close_bracket - 1);
-				location = tag;
-
-				while (std::getline(story, line) && !line.empty()){
-				text+= line + '\n';
-				}
-				story_map[tag] = paragraph(text, location, nexus);
+		switch (line[0]) {
+		case '{': {
+			parse_option(story_map, line);
+		} break;
+		default: {
+			if (line[0] != '[') {
+				parse_paragraph(story, line, story_map);
+			} else {
+				parse_nexus(story, line, story_map);
 			}
-            if (!stat_inv_changes.empty()){
-                auto maps = initialize_stat_inv_changes(stat_inv_changes);
-				attach_change_maps(maps, tag, story_map);
-            }
-		}
+		} break;
 		}
 	}
 	return story_map;
