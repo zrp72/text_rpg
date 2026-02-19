@@ -29,13 +29,10 @@ class character {
     std::string lineage;
 	std::vector<item_instance> inventory;
 	int inventory_size = 30;
+	std::map<std::string, std::vector<item_instance>> stashed_items;
+	std::map<std::string, bool> decisions;
 
     character():attributes(){};
-};
-
-class location {
-	public:
-	std::vector<std::string> dropped_loot;
 };
 
 class option {
@@ -51,7 +48,6 @@ class option {
 class paragraph{
 	public:
 	std::string text;
-	std::string location;
 	std::map<std::string, int> stat_change_map;
     std::map<std::string, int> item_change_map;
 	std::vector<option> options;
@@ -60,8 +56,8 @@ class paragraph{
 	int visits = 0; 
 
 	paragraph() : text(""){}
-	paragraph(std::string t, std::string l) : text(t), location(l){}
-	paragraph(std::string t, std::string l, bool n) : text(t), location(l), nexus(n){}
+	paragraph(std::string t) : text(t){}
+	paragraph(std::string t, bool n) : text(t), nexus(n){}
 
 	void display() {
 		std::cout << text << '\n';
@@ -252,14 +248,7 @@ void parse_paragraph(std::stringstream &story, std::string line, std::map<std::s
 	int colon = line.find(':');
 	std::string tag = line.substr(0,colon);
 	std::string text;
-	std::string location;
 	std::string stat_inv_changes;
-	if (tag.find('(')) {
-		int variant = tag.find('(');
-		location = tag.substr(0, variant);
-	} else {
-		location = tag;
-	}
 	switch (line[colon + 1]) {
 		case ' ': {
 			text = line.substr(colon + 2);
@@ -286,7 +275,7 @@ void parse_paragraph(std::stringstream &story, std::string line, std::map<std::s
 	while (std::getline(story, line) && !line.empty()) {
 		text += '\n' + line;
 	}
-	story_map[tag] = paragraph(text, location);
+	story_map[tag] = paragraph(text);
 	if (!stat_inv_changes.empty()) {
 		auto maps = initialize_stat_inv_changes(stat_inv_changes);
 		attach_change_maps(maps, tag, story_map);
@@ -298,12 +287,11 @@ void parse_nexus(std::stringstream &story, std::string line, std::map<std::strin
 	bool nexus = true;
 	int close_bracket = line.rfind(']', colon);
 	std::string tag = line.substr(1, close_bracket - 1);
-	std::string location = tag;
 	std::string text;
 	while (std::getline(story, line) && !line.empty()) {
 		text += line + '\n';
 	}
-	story_map[tag] = paragraph(text, location, nexus);
+	story_map[tag] = paragraph(text, nexus);
 }
 
 std::map<std::string, paragraph> 
@@ -395,6 +383,24 @@ get_valid_choice(int max){
 	return decision;
 }
 
+bool
+does_stash_contain(std::string stash, std::string item, game_data &data){
+	bool viable = false;
+	if (data.player.stashed_items.contains(stash)){
+		for (const auto &[item_ID, quantity] : data.player.stashed_items[stash]){
+			if (item_ID == item){
+				viable = true;
+				break;
+			}else{
+				viable = false;
+			}
+		}
+	}else{
+		viable = false;
+	}
+	return viable;
+}
+
 std::string
 get_destination(game_data &data, paragraph &par_nexus){
 
@@ -411,7 +417,7 @@ get_destination(game_data &data, paragraph &par_nexus){
 		std::string dest_ver = line.substr(line_start, dest_tag_end);
 
 		if (colon == std::string::npos){
-			destination = par_nexus.location + '(' + dest_ver + ')';
+			destination = dest_ver;
 		}else{
 			int conditions_start = line.find_first_not_of(" =", dest_tag_end);
 			std::stringstream conds(line.substr(conditions_start));
@@ -422,23 +428,38 @@ get_destination(game_data &data, paragraph &par_nexus){
 				int comparator = c.find(':');
 				int c_end = line.find_last_not_of(' ');
 
-				std::string stat = c.substr(c_start, comparator - c_start);
-				int value = std::stoi(c.substr(comparator + 1, c_end + 1));
+				std::string var = c.substr(c_start, comparator - c_start);
+				std::string check = c.substr(comparator + 1, c_end + 1);
 
-				if (stat == "Visits"){
-					viable = par_nexus.visits >= value;
-					continue;
-				}
+				if (check == "True"){
+					if (data.player.decisions[var]){
+						viable = true;
+					}else{
+						viable = false;
+					}
+				}else if (check == "False"){
+					if (!data.player.decisions[var]){
+						viable = true;
+					}else{
+						viable = false;
+					}
+					
+				}else if (check.find_first_not_of("1234567890") != std::string::npos){
+					viable = does_stash_contain(var, check, data);
 
-				if (attributes.contains(stat)){
-					viable = attributes[stat] >= value;
 				}else{
-					debug(par_nexus.location << dest_ver << " nexus has unrecognized stat check." << '\n');
-					viable = false;
+					int value = std::stoi(check);
+
+					if (var == "Visits"){
+						viable = par_nexus.visits >= value;
+						continue;
+					}
+
+					viable = attributes[var] >= value;
 				}
 			}
 			if (viable){
-            	destination = par_nexus.location + '(' + dest_ver + ')';
+            	destination = dest_ver;
         	}
 		}
     }
@@ -494,7 +515,6 @@ check_for_change_maps(game_data &data, auto &search_target){
 
 void run_Story(game_data &data){
 	paragraph p = data.story[data.story_location];
-	debug("Location: " << p.location << '\n');
 
 	check_for_change_maps(data, p);
 	
@@ -510,6 +530,7 @@ void run_Story(game_data &data){
 
 	check_for_change_maps(data, c);
 
+	debug(data.story[next_paragraph_tag].nexus << '\n');
 	if (data.story[next_paragraph_tag].nexus){
 		next_paragraph_tag = get_destination(data, data.story[next_paragraph_tag]);
 	}
