@@ -105,6 +105,14 @@ set_directory (std::filesystem::path original_filepath){
 	std::filesystem::current_path(story_directory);
 }
 
+std::string
+lowercase_string (std::string text){
+	std::transform(text.begin(), text.end(), text.begin(),
+        [](unsigned char c){ return std::tolower(c); }
+    );
+	return text;
+}
+
 std::string randomize_lineage(){
     std::string lineage = "";
     const std::vector<std::string> options = {
@@ -143,6 +151,7 @@ create_item_map(std::string changes){
 		int item_pos = current_item.find(' ', operation) + 1;
 		int amount = std::stoi(current_item.substr(operation, item_pos - 1 - operation));
         std::string item = current_item.substr(item_pos);
+		item = lowercase_string(item);
 		item_map[item] = amount;
     }
 	return item_map;
@@ -158,6 +167,7 @@ create_stat_map(std::string changes){
 		size_t line_start = current_change.find_first_not_of(" (");
 		std::cout << line_start << '\n';
         std::string affected_stat = current_change.substr(line_start, operation - 2);
+		affected_stat = lowercase_string(affected_stat);
         int change = std::stoi(current_change.substr(operation));
         statchange_map[affected_stat] = change;
     }
@@ -186,7 +196,7 @@ initialize_stat_inv_changes(std::string changes){
 
 void
 attach_change_maps(auto maps, std::string id, auto &story_map){
-	if (id.substr(0,3) == "Opt"){
+	if (id.substr(0,3) == "opt"){
         int open_paren = id.find('(');
         int close_paren = id.find(')');
         std::string source = id.substr(open_paren + 1, close_paren - open_paren - 1);
@@ -203,10 +213,9 @@ void
 parse_option(auto &story_map, std::string line){
 	int colon = line.find(':');
 	int close_bracket = line.find('}');
-	std::string source = line.substr(1,colon - 1);
+	std::string parent_paragraph = line.substr(1,colon - 1);
 	std::string destination = line.substr(colon + 1,close_bracket - colon - 1);
 	std::string prompt;
-	paragraph &origin = story_map[source];
     std::string stat_inv_changes;
 
 	switch (line[close_bracket + 1]){
@@ -234,11 +243,14 @@ parse_option(auto &story_map, std::string line){
         stat_inv_changes = line.substr(open_square, close_square - open_square);
 	}
 	}
-    origin.options.push_back(option(prompt, destination));
+
+	destination = lowercase_string(destination);
+	parent_paragraph = lowercase_string(parent_paragraph);
+    story_map[parent_paragraph].options.push_back(option(prompt, destination));
 
 	if (!stat_inv_changes.empty()){
-		int p = origin.options.size();
-    	std::string option_id = "Option(" + source + ")" + std::to_string(p);
+		int p = story_map[parent_paragraph].options.size();
+    	std::string option_id = "option(" + parent_paragraph + ")" + std::to_string(p);
         auto maps = initialize_stat_inv_changes(stat_inv_changes);
 		attach_change_maps(maps, option_id, story_map);
 	}
@@ -275,6 +287,7 @@ void parse_paragraph(std::stringstream &story, std::string line, std::map<std::s
 	while (std::getline(story, line) && !line.empty()) {
 		text += '\n' + line;
 	}
+	tag = lowercase_string(tag);
 	story_map[tag] = paragraph(text);
 	if (!stat_inv_changes.empty()) {
 		auto maps = initialize_stat_inv_changes(stat_inv_changes);
@@ -288,9 +301,13 @@ void parse_nexus(std::stringstream &story, std::string line, std::map<std::strin
 	int close_bracket = line.rfind(']', colon);
 	std::string tag = line.substr(1, close_bracket - 1);
 	std::string text;
+
 	while (std::getline(story, line) && !line.empty()) {
 		text += line + '\n';
 	}
+
+	tag = lowercase_string(tag);
+	text = lowercase_string(text);
 	story_map[tag] = paragraph(text, nexus);
 }
 
@@ -330,10 +347,10 @@ read_item_data(std::string &item_data){
 	item item;
 	while (getline(data, c) && c[0] != '_'){
 		int colon = c.find(':');
-		if (c.substr(0, 2) == "ID"){
+		if (c.substr(0, 2) == "id"){
 			item.ID = c.substr(colon + 2);
 		}
-		if(c.substr(0, colon) == "Stats"){
+		if(c.substr(0, colon) == "stats"){
 			std::string changes;
 			std::string line;
 			while (getline(data, line) && !line.empty()){
@@ -351,6 +368,7 @@ load_items(const std::string &itemCatalog){
 	std::string line;
 	std::map<std::string, item> items;
 	while(std::getline(i, line)){
+		line = lowercase_string(line);
 		if (line.length() == 0 || line.substr(0,2) == "//" || line[0] == '_'){
 			continue;
 		}
@@ -384,11 +402,13 @@ get_valid_choice(int max){
 }
 
 bool
-does_stash_contain(std::string stash, std::string item, game_data &data){
+does_stash_contain(std::string stash, std::string items, game_data &data){
 	bool viable = false;
+	if (items.find('('))
+
 	if (data.player.stashed_items.contains(stash)){
 		for (const auto &[item_ID, quantity] : data.player.stashed_items[stash]){
-			if (item_ID == item){
+			if (item_ID == items){
 				viable = true;
 				break;
 			}else{
@@ -403,7 +423,7 @@ does_stash_contain(std::string stash, std::string item, game_data &data){
 
 bool
 read_nexus_conditions(std::string conditions, game_data &data, paragraph &nexus){
-	
+
 	std::stringstream conds(conditions);
 	std::string c;
 	bool viable = true;
@@ -455,6 +475,7 @@ get_destination(game_data &data, paragraph &par_nexus){
 	++par_nexus.visits;
 
     while (getline(text, line) && !line.empty()){
+		line = lowercase_string(line);
 		int colon = line.find(':');
 		int line_start = line.find_first_not_of(' ');
 		int dest_tag_end = line.find_first_of(" =", line_start + 1);
@@ -465,6 +486,7 @@ get_destination(game_data &data, paragraph &par_nexus){
 		}else{
 			int conditions_start = line.find_first_not_of(" =", dest_tag_end);
 			std::string conditions = line.substr(conditions_start);
+
 			bool viable = read_nexus_conditions(conditions, data, par_nexus);
 			
 			if (viable){
@@ -555,7 +577,7 @@ load_game(const files &files){
     player.lineage = randomize_lineage();
 	auto story = parse_story(files.story);
 	auto items = load_items(files.items);
-	game_data data(story, "Start", items, player);
+	game_data data(story, "start", items, player);
 
 	return data;
 }
