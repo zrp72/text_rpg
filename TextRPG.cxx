@@ -401,6 +401,51 @@ does_stash_contain(std::string stash, std::string item, game_data &data){
 	return viable;
 }
 
+bool
+read_nexus_conditions(std::string conditions, game_data &data, paragraph &nexus){
+	
+	std::stringstream conds(conditions);
+	std::string c;
+	bool viable = true;
+
+	while (viable && std::getline(conds, c, ',')){
+		int c_start = c.find_first_not_of(' ');
+		int comparator = c.find(':');
+		int c_end = c.find_last_not_of(' ');
+
+		std::string var = c.substr(c_start, comparator - c_start);
+		std::string check = c.substr(comparator + 1, c_end + 1);
+
+		if (check == "True"){
+			if (data.player.decisions[var]){
+				viable = true;
+			}else{
+				viable = false;
+			}
+		}else if (check == "False"){
+			if (!data.player.decisions[var]){
+				viable = true;
+			}else{
+				viable = false;
+			}
+			
+		}else if (check.find_first_not_of("1234567890") != std::string::npos){
+			viable = does_stash_contain(var, check, data);
+
+		}else{
+			int value = std::stoi(check);
+
+			if (var == "Visits"){
+				viable = nexus.visits >= value;
+				continue;
+			}
+
+			viable = data.player.attributes[var] >= value;
+		}
+	}
+	return viable;
+}
+
 std::string
 get_destination(game_data &data, paragraph &par_nexus){
 
@@ -408,7 +453,6 @@ get_destination(game_data &data, paragraph &par_nexus){
     std::string line;
     std::stringstream text(par_nexus.text);
 	++par_nexus.visits;
-	auto attributes = data.player.attributes;
 
     while (getline(text, line) && !line.empty()){
 		int colon = line.find(':');
@@ -420,44 +464,9 @@ get_destination(game_data &data, paragraph &par_nexus){
 			destination = dest_ver;
 		}else{
 			int conditions_start = line.find_first_not_of(" =", dest_tag_end);
-			std::stringstream conds(line.substr(conditions_start));
-			std::string c;
-			bool viable = true;
-			while (viable && std::getline(conds, c, ',')){
-				int c_start = line.find_first_not_of(' ');
-				int comparator = c.find(':');
-				int c_end = line.find_last_not_of(' ');
-
-				std::string var = c.substr(c_start, comparator - c_start);
-				std::string check = c.substr(comparator + 1, c_end + 1);
-
-				if (check == "True"){
-					if (data.player.decisions[var]){
-						viable = true;
-					}else{
-						viable = false;
-					}
-				}else if (check == "False"){
-					if (!data.player.decisions[var]){
-						viable = true;
-					}else{
-						viable = false;
-					}
-					
-				}else if (check.find_first_not_of("1234567890") != std::string::npos){
-					viable = does_stash_contain(var, check, data);
-
-				}else{
-					int value = std::stoi(check);
-
-					if (var == "Visits"){
-						viable = par_nexus.visits >= value;
-						continue;
-					}
-
-					viable = attributes[var] >= value;
-				}
-			}
+			std::string conditions = line.substr(conditions_start);
+			bool viable = read_nexus_conditions(conditions, data, par_nexus);
+			
 			if (viable){
             	destination = dest_ver;
         	}
