@@ -13,6 +13,12 @@
 
 #define debug(x)  std::cout << x
 
+class item_instance {
+	public:
+	std::string item_ID;
+	int quantity;
+};
+
 class character {
     public: 
 	std::map<std::string, int> attributes = {
@@ -21,7 +27,7 @@ class character {
 		{"Agility", 0}
 	};
     std::string lineage;
-	std::map<std::string, int> inventory;
+	std::vector<item_instance> inventory;
 	int inventory_size = 30;
 
     character():attributes(){};
@@ -447,24 +453,27 @@ save_game(game_data active_data){
 }*/
 
 void 
-apply_map_to_player(auto &path, auto change_map){
-	for (const std::pair<std::string, int> &it : change_map) {
-        std::string target = it.first;
-		int difference = it.second;
-		debug(target << ": " << path[target] << '\n'); 
-		path[target] = path[target] + difference;
-		debug(target << ": " << path[target] << '\n'); 
-	}
-}
-
-void 
 alter_inventory(game_data &data, auto &st){
 	int open_inventory_space = data.player.inventory_size - data.player.inventory.size();
 	int map_size = st.item_change_map.size();
 	if ((open_inventory_space - map_size) < 0){
 		debug("No inventory" << '\n');
 	}
-	apply_map_to_player(data.player.inventory, st.item_change_map);
+	for (const auto &[c_item, difference] : st.item_change_map){
+		bool applied = false;
+		for (auto &i : data.player.inventory){
+			if (i.item_ID == c_item){
+				i.quantity += difference;
+				applied = true;
+				debug(i.item_ID << ' ' << i.quantity << '\n');
+				break;
+			}
+		}
+		if (!applied && open_inventory_space > 0){
+			data.player.inventory.push_back(item_instance{c_item, difference});
+			debug("New item: " << c_item << '\n');
+		}
+	}
 }
 
 //handles option and paragraph change maps, so auto is NEEDED
@@ -472,7 +481,11 @@ void
 check_for_change_maps(game_data &data, auto &search_target){
 	auto &st = search_target;
 	if (!st.stat_change_map.empty()){
-		apply_map_to_player(data.player.attributes, st.stat_change_map);
+		for (const auto &[target, difference] : st.stat_change_map) {
+			debug(target << ": " << data.player.attributes[target] << '\n'); 
+			data.player.attributes[target] = data.player.attributes[target] + difference;
+			debug(target << ": " << data.player.attributes[target] << '\n'); 
+		}
 	}
 	if (!st.item_change_map.empty()){
 		alter_inventory(data, st);
