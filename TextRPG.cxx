@@ -544,7 +544,8 @@ check_for_change_maps(game_data &data, auto &search_target){
 	}
 }
 
-void run_Story(game_data &data){
+void 
+run_Story(game_data &data){
 	paragraph p = data.story[data.story_location];
 
 	check_for_change_maps(data, p);
