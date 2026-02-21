@@ -1,4 +1,4 @@
-#include <iostream>
+/*#include <iostream>
 #include <map>
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
@@ -117,4 +117,4 @@ present_game(game_data &data){
     SDL_Quit();
 
     return 0;
-}
+}*/

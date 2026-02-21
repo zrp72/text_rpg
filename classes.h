@@ -1,6 +1,9 @@
+#include <iostream>
 #include <map>
 #include <vector>
 #include <SDL3/SDL.h>
+#include <SDL3_ttf/SDL_ttf.h>
+#include <string>
 
 class item_instance {
 	public:
@@ -106,12 +109,24 @@ class relative_rect {
     };
 };
 
-class element {
+class UI_element {
     public:
     SDL_Texture *texture;
     relative_rect rect;
     bool visible = false;
 
-    element(){};
-    element(SDL_Texture *t, relative_rect r) : texture(t), rect(r){};
+    UI_element(){};
+    UI_element(SDL_Texture *t, relative_rect r) : texture(t), rect(r){};
+};
+
+class UI_text_element {
+	public:
+	TTF_Text* text;
+	float relative_x;
+	float relative_y;
+	float relative_wrap_width;
+	float x;
+	float y;
+
+	UI_text_element(){};
 };
