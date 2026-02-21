@@ -91,22 +91,14 @@ class game_data {
 
 class relative_rect {
     public:
-    float x;
-    float y;
-    float w;
-    float h;
+    SDL_Rect rect;
     float relx = 0.5;
     float rely = 0.5;
     float relw = 0.5;
     float relh = 0.5;
 
     relative_rect(){};
-    relative_rect(float x, float y, float w, float h) : relx(x), rely(y), w(w), h(h){}
-    
-    void resize_rect(float screenW, float screenH){
-        x = (relx * screenW) - (w / 2);
-        y = (rely * screenH) - (h / 2);
-    };
+    relative_rect(float x, float y, float w, float h) : relx(x), rely(y), relw(w), relh(h){}
 };
 
 class UI_element {
@@ -125,6 +117,8 @@ class UI_text_element {
 	float relative_x;
 	float relative_y;
 	float relative_wrap_width;
+	float width;
+	float height;
 	float x;
 	float y;
 
