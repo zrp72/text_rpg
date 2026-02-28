@@ -91,7 +91,7 @@ class game_data {
 
 class relative_rect {
     public:
-    SDL_Rect rect;
+    SDL_Rect SDL_rect;
 	//relative values are 0-1
 	//ex: 0.3
     float relative_x = 1;
@@ -105,7 +105,8 @@ class relative_rect {
 
 class relative_text {
 	public:
-	TTF_Text* text;
+	TTF_Text* TTF_text;
+	//bounds is resized on text resize
 	SDL_Rect bounds;
 	relative_rect mask;
 	float relative_x;
@@ -130,7 +131,8 @@ class relative_texture {
 class UI_element {
     public:
     std::vector<relative_texture> texture;
-	std::vector<relative_text> rel_text;
+	std::vector<relative_text> text;
+	relative_rect area;
     bool visible = false;
 
     UI_element(){};
