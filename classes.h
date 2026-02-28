@@ -92,28 +92,22 @@ class game_data {
 class relative_rect {
     public:
     SDL_Rect rect;
-    float relx = 0.5;
-    float rely = 0.5;
-    float relw = 0.5;
-    float relh = 0.5;
+	//relative values are 0-1
+	//ex: 0.3
+    float relative_x = 1;
+    float relative_y = 1;
+    float relative_w = 1;
+    float relative_h = 1;
 
     relative_rect(){};
-    relative_rect(float x, float y, float w, float h) : relx(x), rely(y), relw(w), relh(h){}
+    relative_rect(float x, float y, float w, float h) : relative_x(x), relative_y(y), relative_w(w), relative_h(h){}
 };
 
-class UI_element {
-    public:
-    SDL_Texture *texture;
-    relative_rect rect;
-    bool visible = false;
-
-    UI_element(){};
-    UI_element(SDL_Texture *t, relative_rect r) : texture(t), rect(r){};
-};
-
-class UI_text_element {
+class relative_text {
 	public:
 	TTF_Text* text;
+	SDL_Rect bounds;
+	relative_rect mask;
 	float relative_x;
 	float relative_y;
 	float relative_wrap_width;
@@ -121,6 +115,23 @@ class UI_text_element {
 	float height;
 	float x;
 	float y;
+	int scroll_y;
 
-	UI_text_element(){};
+	relative_text(){};
+};
+
+class relative_texture {
+	public:
+	SDL_Texture* texture;
+	relative_rect srcrect;
+	relative_rect dstrect;
+};
+
+class UI_element {
+    public:
+    std::vector<relative_texture> texture;
+	std::vector<relative_text> rel_text;
+    bool visible = false;
+
+    UI_element(){};
 };
