@@ -19,32 +19,6 @@ convert_rect_to_frect(SDL_Rect rect){
     return frect;
 }
 
-relative_rect
-determine_element_area(UI_element &element){
-    float min_x = 1;
-    float min_y = 1;
-    float top_w = 0;
-    float top_h = 0;
-
-    auto resize = [&](float x, float y, float w, float h){
-        min_x = std::min(min_x, x);
-        min_y = std::min(min_y, y);
-        top_w = std::max(top_w, x + w);
-        top_h = std::max(top_h, y + h);
-    };
-
-    for(auto &texture : element.texture){
-        auto t = texture.dstrect;
-        resize(t.relative_x, t.relative_y, t.relative_w, t.relative_h);
-    }
-    for(auto &text : element.text){
-        resize(text.relative_x, text.relative_y, text.relative_wrap_width, text.mask.relative_h);
-    }
-
-    relative_rect area(min_x, min_y, top_w - min_x, top_h - min_y);
-    return area;
-}
-
 void
 resize_text_elements(relative_text &t, SDL_Window* window){
     int window_width;
@@ -106,8 +80,8 @@ UI_element
 create_paragraph_element(TTF_Font *font, TTF_TextEngine *text_engine, game_data &data){
     UI_element element;
     element.text.push_back(create_paragraph_text(font, text_engine, data));
-    element.area = determine_element_area(element);
-    debug(element.area.SDL_rect.x << "x, " << element.area.SDL_rect.y << "y, " << element.area.SDL_rect.w << "w, " << element.area.SDL_rect.h << "h\n");
+    element.determine_area();
+    
     
     element.visible = true;
     return element;
@@ -183,6 +157,7 @@ present_game(game_data &data){
             if(event.type == SDL_EVENT_QUIT){
                 running = false;
             }
+
             if(event.type == SDL_EVENT_WINDOW_RESIZED){
                 for(auto &[tag, obj] : UI_elements){
                     for(auto &text : obj.text){
@@ -193,28 +168,60 @@ present_game(game_data &data){
                         resize_rects(rel_tex.srcrect, window);
                         resize_rects(rel_tex.dstrect, window);
                     }
+                resize_rects(obj.area, window);
+                debug(UI_elements["Story_display"].area.SDL_rect.x << "x, " << UI_elements["Story_display"].area.SDL_rect.y << "y, " << UI_elements["Story_display"].area.SDL_rect.w << "w, " << UI_elements["Story_display"].area.SDL_rect.h << "h\n");
                 }
             }
-            if (event.type == SDL_EVENT_MOUSE_WHEEL) {
+
+            if(event.type == SDL_EVENT_MOUSE_MOTION){
                 SDL_GetMouseState(&mouse_x, &mouse_y);
                 mouse_pos = SDL_Point(mouse_x, mouse_y);
+            }
+
+            if(event.type == SDL_EVENT_MOUSE_WHEEL){
+
+                auto clamp_scroll = [](int &max_scroll, int &scroll_y){
+                    if (max_scroll < 0){
+                        max_scroll = 0;
+                    }
+                    if (scroll_y < 0){
+                        scroll_y = 0;
+                    }
+                    if (scroll_y > max_scroll){
+                        scroll_y = max_scroll;
+                    }
+                };
 
                 for(auto &[tag, obj] : UI_elements){
+                    bool scrolled = 0;
+
                     for(auto &text : obj.text){
+
                         if(SDL_PointInRect(&mouse_pos, &text.mask.SDL_rect)){
                             int max_scroll = text.height - text.mask.SDL_rect.h;
                             text.scroll_y -= event.wheel.y * 25;
-                            if (max_scroll < 0){
-                                max_scroll = 0;
-                            }
-                            if (text.scroll_y < 0){
-                                text.scroll_y = 0;
-                            }
-                            if (text.scroll_y > max_scroll){
-                                text.scroll_y = max_scroll;
-                            }
+                            clamp_scroll(max_scroll, text.scroll_y);
+
+                            scrolled = 1;
+                            break;
                         }
-                        //if(SDL_PointInRect(&mouse_pos, obj.area))
+                    }
+
+                    if(scrolled){break;}else{
+                        if(SDL_PointInRect(&mouse_pos, &obj.area.SDL_rect)){
+                            int max_scroll = obj.area.SDL_rect.h - obj.mask.SDL_rect.h;
+                            clamp_scroll(max_scroll, obj.scroll_y);
+                        }
+                    }
+                }
+            }
+
+            if(event.type == SDL_EVENT_MOUSE_BUTTON_DOWN){
+                for(auto& [tag, obj] : UI_elements){
+                    for(auto& texture : obj.texture){
+                        /*if(SDL_PointInRect(&mouse_pos, &texture.dstrect.SDL_rect)){
+                            
+                        }*/
                     }
                 }
             }
@@ -225,16 +232,18 @@ present_game(game_data &data){
         
         for (const auto &[tag, obj] : UI_elements){
             if(obj.visible){
+                SDL_SetRenderClipRect(renderer, &obj.mask.SDL_rect);
                 for(auto &t : obj.texture){
                     SDL_FRect srcrect = convert_rect_to_frect(t.srcrect.SDL_rect);
                     SDL_FRect dstrect = convert_rect_to_frect(t.dstrect.SDL_rect);
-                    SDL_RenderTexture(renderer, t.texture, &srcrect, &dstrect);
+                    SDL_RenderTexture(renderer, t.SDL_texture, &srcrect, &dstrect);
                 }
                 for(auto &text : obj.text){
                     SDL_SetRenderClipRect(renderer, &text.mask.SDL_rect);
                     TTF_DrawRendererText(text.TTF_text, text.x, text.y - text.scroll_y);
-                    SDL_SetRenderClipRect(renderer, NULL);
+                    SDL_SetRenderClipRect(renderer, &obj.mask.SDL_rect);
                 }
+                SDL_SetRenderClipRect(renderer, NULL);
             }
         }
         
@@ -243,7 +252,7 @@ present_game(game_data &data){
 
     for(auto &[tag, obj] : UI_elements){
         for(auto &t : obj.texture){
-            SDL_DestroyTexture(t.texture);
+            SDL_DestroyTexture(t.SDL_texture);
         }
         for(auto &text : obj.text){
             TTF_DestroyText(text.TTF_text);

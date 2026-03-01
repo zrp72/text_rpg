@@ -4,6 +4,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <string>
+#include <functional>
 
 class item_instance {
 	public:
@@ -123,17 +124,48 @@ class relative_text {
 
 class relative_texture {
 	public:
-	SDL_Texture* texture;
+	SDL_Texture* SDL_texture;
 	relative_rect srcrect;
 	relative_rect dstrect;
+	std::vector<std::function<void(game_data)>> click_events;
+
+	relative_texture(){};
 };
 
 class UI_element {
     public:
     std::vector<relative_texture> texture;
 	std::vector<relative_text> text;
+	relative_rect mask;
 	relative_rect area;
+	int scroll_y = 0;
     bool visible = false;
 
     UI_element(){};
+
+	void determine_area(){
+		float min_x = 1;
+		float min_y = 1;
+		float top_w = 0;
+		float top_h = 0;
+
+		auto resize = [&](float x, float y, float w, float h){
+			min_x = std::min(min_x, x);
+			min_y = std::min(min_y, y);
+			top_w = std::max(top_w, x + w);
+			top_h = std::max(top_h, y + h);
+		};
+
+		for(auto &tex : texture){
+			auto t = tex.dstrect;
+			resize(t.relative_x, t.relative_y, t.relative_w, t.relative_h);
+		}
+		for(auto &txt : text){
+			resize(txt.relative_x, txt.relative_y, txt.relative_wrap_width, txt.mask.relative_h);
+		}
+
+		
+		relative_rect border(min_x, min_y, top_w - min_x, top_h - min_y);
+		area = border;
+	}
 };
