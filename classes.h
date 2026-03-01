@@ -127,7 +127,7 @@ class relative_texture {
 	SDL_Texture* SDL_texture;
 	relative_rect srcrect;
 	relative_rect dstrect;
-	std::vector<std::function<void(game_data)>> click_events;
+	std::function<void(game_data)> click_events;
 
 	relative_texture(){};
 };
