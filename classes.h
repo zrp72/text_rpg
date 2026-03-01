@@ -164,8 +164,6 @@ class UI_element {
 			resize(txt.relative_x, txt.relative_y, txt.relative_wrap_width, txt.mask.relative_h);
 		}
 
-		
-		relative_rect border(min_x, min_y, top_w - min_x, top_h - min_y);
-		area = border;
+		area = {min_x, min_y, top_w - min_x, top_h - min_y};
 	}
 };
