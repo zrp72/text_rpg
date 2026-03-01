@@ -89,48 +89,29 @@ update_paragraph_text(UI_element &paragraph_element, game_data &data){
 int 
 present_game(game_data &data){
 
-    if(!SDL_Init(SDL_INIT_VIDEO)){
-        SDL_Log("Failed to initialize SDL_video: %s", SDL_GetError());
-        SDL_Quit();
-    }
+    try{
     
-    if(!TTF_Init()){
-        SDL_Log("Failed to initialize SDL_ttf: %s", SDL_GetError());
-        SDL_Quit();
-    }
-
-    SDL_Window *window = SDL_CreateWindow("TextRPG", 800, 600, SDL_WINDOW_RESIZABLE);
-    if(!window){
-        SDL_Log("Failed to create window: %s", SDL_GetError());
-        SDL_Quit();
-    }
-
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, NULL);
-    if(!renderer){
-        SDL_Log("Failed to create renderer: %s", SDL_GetError());
-        SDL_Quit();
-    }
-
+    gui_core gui;
+        
     TTF_Font *font = TTF_OpenFont("ttf files/Roboto-Light.ttf", 24);
     if (!font) {
         std::cout << "Font failed to load: " << SDL_GetError() << "\n";
     }
     TTF_SetFontWrapAlignment(font, TTF_HORIZONTAL_ALIGN_CENTER);
-    TTF_TextEngine* text_engine = TTF_CreateRendererTextEngine(renderer);
 
     std::map<std::string, UI_element> UI_elements;
-    UI_elements["story_display"] = (create_paragraph_element(font, text_engine, data));
+    UI_elements["story_display"] = (create_paragraph_element(font, gui.text_engine, data));
 
     for(auto &[tag, obj] : UI_elements){
         for(auto &text : obj.text){
-            resize_text_elements(text, window);
-            resize_rects(text.mask, window);
+            resize_text_elements(text, gui.window);
+            resize_rects(text.mask, gui.window);
         }
         for(auto &texture : obj.texture){
-            resize_rects(texture.srcrect, window);
-            resize_rects(texture.dstrect, window);
+            resize_rects(texture.srcrect, gui.window);
+            resize_rects(texture.dstrect, gui.window);
         }
-        resize_rects(obj.area, window);
+        resize_rects(obj.area, gui.window);
     }
 
     bool running = true;
@@ -149,14 +130,14 @@ present_game(game_data &data){
             if(event.type == SDL_EVENT_WINDOW_RESIZED){
                 for(auto &[tag, obj] : UI_elements){
                     for(auto &text : obj.text){
-                        resize_text_elements(text, window);
-                        resize_rects(text.mask, window);
+                        resize_text_elements(text, gui.window);
+                        resize_rects(text.mask, gui.window);
                     }
                     for(auto &rel_tex : obj.texture){
-                        resize_rects(rel_tex.srcrect, window);
-                        resize_rects(rel_tex.dstrect, window);
+                        resize_rects(rel_tex.srcrect, gui.window);
+                        resize_rects(rel_tex.dstrect, gui.window);
                     }
-                resize_rects(obj.area, window);
+                resize_rects(obj.area, gui.window);
                 debug(UI_elements["story_display"].area.SDL_rect.x << "x, " << UI_elements["Story_display"].area.SDL_rect.y << "y, " << UI_elements["Story_display"].area.SDL_rect.w << "w, " << UI_elements["Story_display"].area.SDL_rect.h << "h\n");
                 }
             }
@@ -208,30 +189,30 @@ present_game(game_data &data){
             }
         }
 
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
+        SDL_SetRenderDrawColor(gui.renderer, 0, 0, 0, 255);
+        SDL_RenderClear(gui.renderer);
         
         for (const auto &[tag, obj] : UI_elements){
             if(obj.visible){
-                SDL_SetRenderClipRect(renderer, &obj.mask.SDL_rect);
+                SDL_SetRenderClipRect(gui.renderer, &obj.mask.SDL_rect);
                 for(auto &t : obj.texture){
                     SDL_FRect srcrect;
                     SDL_FRect dstrect;
                     SDL_RectToFRect(&t.srcrect.SDL_rect, &srcrect);
                     SDL_RectToFRect(&t.dstrect.SDL_rect, &dstrect);
 
-                    SDL_RenderTexture(renderer, t.SDL_texture, &srcrect, &dstrect);
+                    SDL_RenderTexture(gui.renderer, t.SDL_texture, &srcrect, &dstrect);
                 }
                 for(auto &text : obj.text){
-                    SDL_SetRenderClipRect(renderer, &text.mask.SDL_rect);
+                    SDL_SetRenderClipRect(gui.renderer, &text.mask.SDL_rect);
                     TTF_DrawRendererText(text.TTF_text, text.x, text.y - text.scroll_y);
-                    SDL_SetRenderClipRect(renderer, &obj.mask.SDL_rect);
+                    SDL_SetRenderClipRect(gui.renderer, &obj.mask.SDL_rect);
                 }
-                SDL_SetRenderClipRect(renderer, NULL);
+                SDL_SetRenderClipRect(gui.renderer, NULL);
             }
         }
         
-        SDL_RenderPresent(renderer);
+        SDL_RenderPresent(gui.renderer);
     }
 
     for(auto &[tag, obj] : UI_elements){
@@ -242,11 +223,10 @@ present_game(game_data &data){
             TTF_DestroyText(text.TTF_text);
         }
     }
-    TTF_DestroySurfaceTextEngine(text_engine);
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    TTF_Quit();
-    SDL_Quit();
 
+    }catch (const std::exception &a){
+        return 1;
+    }
+    
     return 0;
 }

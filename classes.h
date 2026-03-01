@@ -167,3 +167,43 @@ class UI_element {
 		area = {min_x, min_y, top_w - min_x, top_h - min_y};
 	}
 };
+
+class gui_core {
+	public:
+	SDL_Window* window;
+	SDL_Renderer* renderer;
+	TTF_TextEngine* text_engine;
+
+	gui_core(){
+		if(!SDL_Init(SDL_INIT_VIDEO)){
+			throw std::runtime_error(SDL_GetError());
+		}
+		
+		if(!TTF_Init()){
+			throw std::runtime_error(SDL_GetError());
+		}
+		
+		window = SDL_CreateWindow("Test", 800, 600, SDL_WINDOW_RESIZABLE);
+		if(!window){
+			throw std::runtime_error(SDL_GetError());
+		}
+
+		renderer = SDL_CreateRenderer(window, NULL);
+		if(!renderer){
+			throw std::runtime_error(SDL_GetError());
+		}
+
+		text_engine = TTF_CreateRendererTextEngine(renderer);
+		if(!text_engine){
+			throw std::runtime_error(SDL_GetError());
+		}
+	}
+
+	~gui_core(){
+		TTF_DestroySurfaceTextEngine(text_engine);
+		SDL_DestroyRenderer(renderer);
+		SDL_DestroyWindow(window);
+		TTF_Quit();
+		SDL_Quit();
+	}
+};

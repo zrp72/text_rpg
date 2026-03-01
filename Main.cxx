@@ -21,6 +21,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    //std::map<std::string, UI_element> elements = create_UI_elements(loaded_data);
     if(present_game(loaded_data)){
         debug("Failed to present game");
         return 1;
