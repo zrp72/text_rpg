@@ -127,7 +127,7 @@ class relative_texture {
 	SDL_Texture* SDL_texture;
 	relative_rect srcrect;
 	relative_rect dstrect;
-	std::vector<std::function<void(game_data)>> click_events;
+	std::function<void(game_data)> click_events;
 
 	relative_texture(){};
 };
@@ -164,8 +164,6 @@ class UI_element {
 			resize(txt.relative_x, txt.relative_y, txt.relative_wrap_width, txt.mask.relative_h);
 		}
 
-		
-		relative_rect border(min_x, min_y, top_w - min_x, top_h - min_y);
-		area = border;
+		area = {min_x, min_y, top_w - min_x, top_h - min_y};
 	}
 };
