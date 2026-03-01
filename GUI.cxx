@@ -14,12 +14,6 @@ TTF_GetStringSize
 
 #define debug(x)  std::cout << x 
 
-SDL_FRect
-convert_rect_to_frect(SDL_Rect rect){
-    SDL_FRect frect(rect.x, rect. y, rect.w, rect.h);
-    return frect;
-}
-
 void
 resize_text_elements(relative_text &t, SDL_Window* window){
     int window_width;
@@ -34,7 +28,6 @@ resize_text_elements(relative_text &t, SDL_Window* window){
     t.width = text_width;
     t.height = text_height;
 
-
     t.x = window_width * t.relative_x;
     t.y = window_height * t.relative_y;
 
@@ -47,7 +40,6 @@ resize_rects(relative_rect &rect, SDL_Window* window){
     int window_width;
     int window_height;
     SDL_GetWindowSizeInPixels(window, &window_width, &window_height);
-
 
     rect.SDL_rect.x = window_width * rect.relative_x;
     rect.SDL_rect.y = window_height * rect.relative_y;
@@ -112,9 +104,6 @@ present_game(game_data &data){
         SDL_Log("Failed to create window: %s", SDL_GetError());
         SDL_Quit();
     }
-    int window_width;
-    int window_height;
-    SDL_GetWindowSizeInPixels(window, &window_width, &window_height);
 
     SDL_Renderer *renderer = SDL_CreateRenderer(window, NULL);
     if(!renderer){
@@ -129,10 +118,8 @@ present_game(game_data &data){
     TTF_SetFontWrapAlignment(font, TTF_HORIZONTAL_ALIGN_CENTER);
     TTF_TextEngine* text_engine = TTF_CreateRendererTextEngine(renderer);
 
-    const char* story_text = data.story[data.story_location].text.c_str();
-    
     std::map<std::string, UI_element> UI_elements;
-    UI_elements["Story_display"] = (create_paragraph_element(font, text_engine, data));
+    UI_elements["story_display"] = (create_paragraph_element(font, text_engine, data));
 
     for(auto &[tag, obj] : UI_elements){
         for(auto &text : obj.text){
@@ -170,7 +157,7 @@ present_game(game_data &data){
                         resize_rects(rel_tex.dstrect, window);
                     }
                 resize_rects(obj.area, window);
-                debug(UI_elements["Story_display"].area.SDL_rect.x << "x, " << UI_elements["Story_display"].area.SDL_rect.y << "y, " << UI_elements["Story_display"].area.SDL_rect.w << "w, " << UI_elements["Story_display"].area.SDL_rect.h << "h\n");
+                debug(UI_elements["story_display"].area.SDL_rect.x << "x, " << UI_elements["Story_display"].area.SDL_rect.y << "y, " << UI_elements["Story_display"].area.SDL_rect.w << "w, " << UI_elements["Story_display"].area.SDL_rect.h << "h\n");
                 }
             }
 
