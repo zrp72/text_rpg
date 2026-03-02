@@ -48,38 +48,6 @@ resize_rects(relative_rect &rect, SDL_Window* window){
     rect.SDL_rect.h = window_height * rect.relative_h;
 }
 
-relative_text 
-create_paragraph_text(TTF_Font* font, TTF_TextEngine* text_engine, game_data &data){
-    relative_text text_element;
-    const char* story_text = data.story[data.story_location].text.c_str();
-    TTF_Text* text = TTF_CreateText(text_engine, font, story_text, 0);
-    if (!text) {
-        debug("Text failed to create: " << SDL_GetError() << "\n");
-    }
-    TTF_SetTextColor(text, 255, 255, 255, 255);
-
-    text_element.relative_wrap_width = .7;
-    text_element.relative_x = .15;
-    text_element.relative_y = .1;
-    text_element.TTF_text = text;
-
-    relative_rect viewport(.15, .1, .7, .5);
-    text_element.mask = viewport;
-
-    return text_element;
-}
-
-UI_element
-create_paragraph_element(TTF_Font *font, TTF_TextEngine *text_engine, game_data &data){
-    UI_element element;
-    element.text.push_back(create_paragraph_text(font, text_engine, data));
-    element.determine_area();
-    
-    
-    element.visible = true;
-    return element;
-}
-
 void
 update_paragraph_text(UI_element &paragraph_element, game_data &data){
     char* new_text = data.story[data.story_location].text.data();
@@ -87,20 +55,8 @@ update_paragraph_text(UI_element &paragraph_element, game_data &data){
 }
 
 int 
-present_game(game_data &data){
+launch_game(game_data &data, std::map<std::string, UI_element> &UI_elements, gui_core& gui){
 
-    try{
-    
-    gui_core gui;
-        
-    TTF_Font *font = TTF_OpenFont("ttf files/Roboto-Light.ttf", 24);
-    if (!font) {
-        std::cout << "Font failed to load: " << SDL_GetError() << "\n";
-    }
-    TTF_SetFontWrapAlignment(font, TTF_HORIZONTAL_ALIGN_CENTER);
-
-    std::map<std::string, UI_element> UI_elements;
-    UI_elements["story_display"] = (create_paragraph_element(font, gui.text_engine, data));
 
     for(auto &[tag, obj] : UI_elements){
         for(auto &text : obj.text){
@@ -224,9 +180,5 @@ present_game(game_data &data){
         }
     }
 
-    }catch (const std::exception &a){
-        return 1;
-    }
-    
     return 0;
 }

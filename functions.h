@@ -5,9 +5,11 @@
 
 game_data load_game();
 
-int present_game(game_data &data);
+std::map<std::string, UI_element> create_UI_elements(gui_core&, game_data);
 
-int run_story(game_data &data);
+int launch_game(game_data&, std::map<std::string, UI_element>&, gui_core&);
+
+int run_story(game_data&);
 
 std::string lowercase_string(std::string);
 

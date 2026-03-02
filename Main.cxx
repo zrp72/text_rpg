@@ -8,7 +8,6 @@
 #define debug(x)  std::cout << x 
 
 
-
 int main(int argc, char** argv) {
     debug("Original directory: " << std::filesystem::current_path() << '\n');
     std::string base_path = SDL_GetBasePath();
@@ -21,11 +20,25 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    //std::map<std::string, UI_element> elements = create_UI_elements(loaded_data);
-    if(present_game(loaded_data)){
-        debug("Failed to present game");
+    try {
+
+        gui_core gui;
+        gui.add_font("roboto_light", "ttf files/Roboto-Light.ttf", 24, TTF_HORIZONTAL_ALIGN_CENTER);
+
+        std::map<std::string, UI_element> elements = create_UI_elements(gui, loaded_data);
+
+        if(elements.empty()){
+            debug("Failed to create UI elements");
+            return 1;
+        }
+
+        if(launch_game(loaded_data, elements, gui)){
+            debug("Failed to present game");
+            return 1;
+        }
+
+    }catch (const std::exception &a){
         return 1;
     }
-
     return 0;
 }

@@ -90,89 +90,12 @@ class game_data {
 	: story(s), story_location(l), items(i), player(p){};
 };
 
-class relative_rect {
-    public:
-    SDL_Rect SDL_rect;
-	//relative values are 0-1
-	//ex: 0.3
-    float relative_x = 1;
-    float relative_y = 1;
-    float relative_w = 1;
-    float relative_h = 1;
-
-    relative_rect(){};
-    relative_rect(float x, float y, float w, float h) : relative_x(x), relative_y(y), relative_w(w), relative_h(h){}
-};
-
-class relative_text {
-	public:
-	TTF_Text* TTF_text;
-	//bounds is resized on text resize
-	SDL_Rect bounds;
-	relative_rect mask;
-	float relative_x;
-	float relative_y;
-	float relative_wrap_width;
-	float width;
-	float height;
-	float x;
-	float y;
-	int scroll_y;
-
-	relative_text(){};
-};
-
-class relative_texture {
-	public:
-	SDL_Texture* SDL_texture;
-	relative_rect srcrect;
-	relative_rect dstrect;
-	std::function<void(game_data)> click_events;
-
-	relative_texture(){};
-};
-
-class UI_element {
-    public:
-    std::vector<relative_texture> texture;
-	std::vector<relative_text> text;
-	relative_rect mask;
-	relative_rect area;
-	int scroll_y = 0;
-    bool visible = false;
-
-    UI_element(){};
-
-	void determine_area(){
-		float min_x = 1;
-		float min_y = 1;
-		float top_w = 0;
-		float top_h = 0;
-
-		auto resize = [&](float x, float y, float w, float h){
-			min_x = std::min(min_x, x);
-			min_y = std::min(min_y, y);
-			top_w = std::max(top_w, x + w);
-			top_h = std::max(top_h, y + h);
-		};
-
-		for(auto &tex : texture){
-			auto t = tex.dstrect;
-			resize(t.relative_x, t.relative_y, t.relative_w, t.relative_h);
-		}
-		for(auto &txt : text){
-			resize(txt.relative_x, txt.relative_y, txt.relative_wrap_width, txt.mask.relative_h);
-		}
-
-		area = {min_x, min_y, top_w - min_x, top_h - min_y};
-	}
-};
-
 class gui_core {
 	public:
 	SDL_Window* window;
 	SDL_Renderer* renderer;
 	TTF_TextEngine* text_engine;
+	std::map<std::string, TTF_Font*> fonts;
 
 	gui_core(){
 		if(!SDL_Init(SDL_INIT_VIDEO)){
@@ -206,4 +129,108 @@ class gui_core {
 		TTF_Quit();
 		SDL_Quit();
 	}
+
+	void add_font(std::string tag, std::string filepath, int font_size, TTF_HorizontalAlignment alignment){
+		TTF_Font* font = TTF_OpenFont(filepath.data(), font_size);
+		if(!font){
+			SDL_Log("Failed to load %s font: %s", tag, SDL_GetError());
+		}
+		TTF_SetFontWrapAlignment(font, alignment);
+		fonts[tag] = font;
+	}
+};
+
+class relative_rect {
+    public:
+    SDL_Rect SDL_rect;
+	//relative values are 0-1
+	//ex: 0.3
+    float relative_x = 1;
+    float relative_y = 1;
+    float relative_w = 1;
+    float relative_h = 1;
+
+    relative_rect(){};
+    relative_rect(float x, float y, float w, float h) : relative_x(x), relative_y(y), relative_w(w), relative_h(h){}
+};
+
+class relative_text {
+	public:
+	TTF_Text* TTF_text;
+	relative_rect mask;
+	float relative_x;
+	float relative_y;
+	float relative_wrap_width;
+	//following values are automatically set
+	SDL_Rect bounds;
+	float width;
+	float height;
+	float x;
+	float y;
+	int scroll_y;
+
+	relative_text(){};
+	relative_text(TTF_Text* t, relative_rect m, float x, float y, float w)
+	: TTF_text(t), mask(m), relative_x(x), relative_y(y), relative_wrap_width(w){};
+};
+
+class relative_texture {
+	public:
+	SDL_Texture* SDL_texture;
+	relative_rect srcrect;
+	relative_rect dstrect;
+	std::function<void(game_data&)> click_events;
+
+	relative_texture(){};
+};
+
+class UI_element {
+    public:
+    std::vector<relative_texture> texture;
+	std::vector<relative_text> text;
+	relative_rect mask;
+	relative_rect area;
+	int scroll_y = 0;
+    bool visible = false;
+
+    UI_element(){};
+
+	void determine_area(){
+
+		float min_x = 1;
+		float min_y = 1;
+		float top_w = 0;
+		float top_h = 0;
+
+		auto resize = [&](float x, float y, float w, float h){
+			min_x = std::min(min_x, x);
+			min_y = std::min(min_y, y);
+			top_w = std::max(top_w, x + w);
+			top_h = std::max(top_h, y + h);
+		};
+
+		for(auto &tex : texture){
+			auto t = tex.dstrect;
+			resize(t.relative_x, t.relative_y, t.relative_w, t.relative_h);
+		}
+		for(auto &txt : text){
+			resize(txt.relative_x, txt.relative_y, txt.relative_wrap_width, txt.mask.relative_h);
+		}
+
+		area = {min_x, min_y, top_w - min_x, top_h - min_y};
+	}
+
+	void add_text(gui_core& gui, 
+		const char* txt, 
+		std::string font, 
+		SDL_Color color, 
+		relative_rect txtmask,
+		float rel_x, float rel_y, float rel_wrap){
+			TTF_Text* TTF_text = TTF_CreateText(gui.text_engine, gui.fonts[font], txt, 0);
+			TTF_SetTextColor(TTF_text, color.r, color.g, color.b, color.a);
+			if(!TTF_text){
+				SDL_Log("Failed to add text: %s\n", SDL_GetError());
+			}
+			text.push_back(relative_text(TTF_text, txtmask, rel_x, rel_y, rel_wrap));
+		}
 };
