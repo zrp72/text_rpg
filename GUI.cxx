@@ -30,9 +30,6 @@ resize_text_elements(relative_text &t, SDL_Window* window){
 
     t.x = window_width * t.relative_x;
     t.y = window_height * t.relative_y;
-
-    SDL_Rect bounds(t.x, t.y, t.width, t.height);
-    t.bounds = bounds;
 }
 
 void
@@ -68,6 +65,7 @@ launch_game(game_data &data, std::map<std::string, UI_element> &UI_elements, gui
             resize_rects(texture.dstrect, gui.window);
         }
         resize_rects(obj.area, gui.window);
+        resize_rects(obj.mask, gui.window);
     }
 
     bool running = true;
@@ -94,7 +92,7 @@ launch_game(game_data &data, std::map<std::string, UI_element> &UI_elements, gui
                         resize_rects(rel_tex.dstrect, gui.window);
                     }
                 resize_rects(obj.area, gui.window);
-                debug(UI_elements["story_display"].area.SDL_rect.x << "x, " << UI_elements["Story_display"].area.SDL_rect.y << "y, " << UI_elements["Story_display"].area.SDL_rect.w << "w, " << UI_elements["Story_display"].area.SDL_rect.h << "h\n");
+                resize_rects(obj.mask, gui.window);
                 }
             }
 
@@ -110,8 +108,8 @@ launch_game(game_data &data, std::map<std::string, UI_element> &UI_elements, gui
                     scroll_y = std::clamp(scroll_y, 0, max_scroll);
                 };
 
+                bool scrolled = false;
                 for(auto &[tag, obj] : UI_elements){
-                    bool scrolled = 0;
 
                     for(auto &text : obj.text){
 
@@ -120,7 +118,7 @@ launch_game(game_data &data, std::map<std::string, UI_element> &UI_elements, gui
                             text.scroll_y -= event.wheel.y * 25;
                             clamp_scroll(max_scroll, text.scroll_y);
 
-                            scrolled = 1;
+                            if(max_scroll != 0){scrolled = true;}
                             break;
                         }
                     }
@@ -128,7 +126,9 @@ launch_game(game_data &data, std::map<std::string, UI_element> &UI_elements, gui
                     if(scrolled){break;}else{
                         if(SDL_PointInRect(&mouse_pos, &obj.area.SDL_rect)){
                             int max_scroll = obj.area.SDL_rect.h - obj.mask.SDL_rect.h;
+                            obj.scroll_y -= event.wheel.y * 25;
                             clamp_scroll(max_scroll, obj.scroll_y);
+                            break;
                         }
                     }
                 }
@@ -150,19 +150,38 @@ launch_game(game_data &data, std::map<std::string, UI_element> &UI_elements, gui
         
         for (const auto &[tag, obj] : UI_elements){
             if(obj.visible){
+                SDL_SetRenderDrawColor(gui.renderer, 255, 192, 203, 255);
+                SDL_FRect frect1;
+                SDL_RectToFRect(&obj.area.SDL_rect, &frect1);
+                SDL_RenderRect(gui.renderer, &frect1);
+
                 SDL_SetRenderClipRect(gui.renderer, &obj.mask.SDL_rect);
                 for(auto &t : obj.texture){
                     SDL_FRect srcrect;
                     SDL_FRect dstrect;
                     SDL_RectToFRect(&t.srcrect.SDL_rect, &srcrect);
                     SDL_RectToFRect(&t.dstrect.SDL_rect, &dstrect);
+                    dstrect.y -= obj.scroll_y;
+                    //add getrectintersection
 
                     SDL_RenderTexture(gui.renderer, t.SDL_texture, &srcrect, &dstrect);
                 }
+
                 for(auto &text : obj.text){
-                    SDL_SetRenderClipRect(gui.renderer, &text.mask.SDL_rect);
-                    TTF_DrawRendererText(text.TTF_text, text.x, text.y - text.scroll_y);
-                    SDL_SetRenderClipRect(gui.renderer, &obj.mask.SDL_rect);
+                    SDL_Rect original_mask = text.mask.SDL_rect; 
+                    original_mask.y -= obj.scroll_y;
+                    SDL_Rect mask;
+                    
+                    
+                    if(SDL_GetRectIntersection(&original_mask, &obj.mask.SDL_rect, &mask)){
+                        SDL_SetRenderClipRect(gui.renderer, &mask);
+                        SDL_SetRenderDrawColor(gui.renderer, 255, 255, 255, 255);
+                        SDL_FRect frect;
+                        SDL_RectToFRect(&mask, &frect);
+                        SDL_RenderRect(gui.renderer, &frect);
+
+                        TTF_DrawRendererText(text.TTF_text, text.x, text.y - text.scroll_y - obj.scroll_y);
+                    }
                 }
                 SDL_SetRenderClipRect(gui.renderer, NULL);
             }
@@ -179,6 +198,7 @@ launch_game(game_data &data, std::map<std::string, UI_element> &UI_elements, gui
             TTF_DestroyText(text.TTF_text);
         }
     }
+    //gui_core destructor handles rest of SDL and TTF destructions
 
     return 0;
 }

@@ -20,6 +20,14 @@ EEEEEEEEEEEEEEEEEEESSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTTT
 
 {Start:Town}(Rep -15) Turn left
 {Start:Wilderness} Turn right
+{Start:Town}(Rep -15) Test?
+{Start:Wilderness} Turn right
+{Start:Town}(Rep -15) Turn left
+{Start:Wilderness} Turn right
+{Start:Town}(Rep -15) Turn left
+{Start:Wilderness} Turn right
+{Start:Town}(Rep -15) Turn left
+{Start:Wilderness} Turn right
 
 
 [Town]:

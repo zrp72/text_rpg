@@ -145,8 +145,8 @@ class relative_rect {
     SDL_Rect SDL_rect;
 	//relative values are 0-1
 	//ex: 0.3
-    float relative_x = 1;
-    float relative_y = 1;
+    float relative_x = 0;
+    float relative_y = 0;
     float relative_w = 1;
     float relative_h = 1;
 
@@ -162,7 +162,6 @@ class relative_text {
 	float relative_y;
 	float relative_wrap_width;
 	//following values are automatically set
-	SDL_Rect bounds;
 	float width;
 	float height;
 	float x;
