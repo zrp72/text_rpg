@@ -15,20 +15,6 @@
 
 #define debug(x)  std::cout << x
 
-
-int 
-get_valid_choice(int max){
-	int decision;
-	std::cin >> decision;
-	if (std::cin.fail() || decision <= 0 || decision > max){
-		std::cerr << "Invalid choice: " << decision << "\nMax: " << max << '\n';
-		std::cin.clear();
-		std::cin.ignore(std::numeric_limits<std::streamsize> ::max(), '\n');
-		decision = -1;
-	}
-	return decision;
-}
-
 bool
 does_stash_contain(std::string stash, std::string items, game_data &data){
 	bool viable = false;
@@ -172,19 +158,17 @@ check_for_change_maps(game_data &data, auto &search_target){
 	}
 }
 
-int 
-run_story(game_data &data){
+int
+update_UI(std::map<std::string, UI_element>& elements, game_data& data){
+	auto o = elements["option_display"];
+	auto p = elements["story_display"];
+}
+
+int
+progress_story(std::map<std::string, UI_element>& elements, game_data &data, int choice){
 	paragraph p = data.story[data.story_location];
 
-	check_for_change_maps(data, p);
-	
-	int decision = -1;
-	while (decision == -1){;
-		p.display();
-		decision = get_valid_choice(p.options.size());
-	}
-	
-	option c = p.options[decision - 1];
+	option c = p.options[choice];
 	debug("Dest label: " << c.dest_label << '\n');
 	std::string next_paragraph_tag = c.dest_label;
 
@@ -196,6 +180,9 @@ run_story(game_data &data){
 	}
 
 	data.story_location = next_paragraph_tag;
+	check_for_change_maps(data, data.story[data.story_location]);
+
+	update_UI(elements, data);
 	//save_game(data);
-	run_story(data);
+	return 0;
 }

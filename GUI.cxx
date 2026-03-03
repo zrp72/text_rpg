@@ -52,20 +52,19 @@ update_paragraph_text(UI_element &paragraph_element, game_data &data){
 }
 
 int 
-launch_game(game_data &data, std::map<std::string, UI_element> &UI_elements, gui_core& gui){
+launch_game(game_data &data, assets& assets, gui_core& gui){
 
 
-    for(auto &[tag, obj] : UI_elements){
+    for(auto &[tag, obj] : assets.elements){
+        for(auto &texture : obj.texture){
+            resize_rects(texture.dstrect, gui.window);
+        }
         for(auto &text : obj.text){
             resize_text_elements(text, gui.window);
             resize_rects(text.mask, gui.window);
         }
-        for(auto &texture : obj.texture){
-            resize_rects(texture.srcrect, gui.window);
-            resize_rects(texture.dstrect, gui.window);
-        }
-        resize_rects(obj.area, gui.window);
-        resize_rects(obj.mask, gui.window);
+    resize_rects(obj.area, gui.window);
+    resize_rects(obj.mask, gui.window);
     }
 
     bool running = true;
@@ -82,14 +81,13 @@ launch_game(game_data &data, std::map<std::string, UI_element> &UI_elements, gui
             }
 
             if(event.type == SDL_EVENT_WINDOW_RESIZED){
-                for(auto &[tag, obj] : UI_elements){
+                for(auto &[tag, obj] : assets.elements){
+                    for(auto &texture : obj.texture){
+                        resize_rects(texture.dstrect, gui.window);
+                    }
                     for(auto &text : obj.text){
                         resize_text_elements(text, gui.window);
                         resize_rects(text.mask, gui.window);
-                    }
-                    for(auto &rel_tex : obj.texture){
-                        resize_rects(rel_tex.srcrect, gui.window);
-                        resize_rects(rel_tex.dstrect, gui.window);
                     }
                 resize_rects(obj.area, gui.window);
                 resize_rects(obj.mask, gui.window);
@@ -109,7 +107,7 @@ launch_game(game_data &data, std::map<std::string, UI_element> &UI_elements, gui
                 };
 
                 bool scrolled = false;
-                for(auto &[tag, obj] : UI_elements){
+                for(auto &[tag, obj] : assets.elements){
 
                     for(auto &text : obj.text){
 
@@ -135,7 +133,7 @@ launch_game(game_data &data, std::map<std::string, UI_element> &UI_elements, gui
             }
 
             if(event.type == SDL_EVENT_MOUSE_BUTTON_DOWN){
-                for(auto& [tag, obj] : UI_elements){
+                for(auto& [tag, obj] : assets.elements){
                     for(auto& texture : obj.texture){
                         /*if(SDL_PointInRect(&mouse_pos, &texture.dstrect.SDL_rect)){
                             
@@ -148,7 +146,7 @@ launch_game(game_data &data, std::map<std::string, UI_element> &UI_elements, gui
         SDL_SetRenderDrawColor(gui.renderer, 0, 0, 0, 255);
         SDL_RenderClear(gui.renderer);
         
-        for (const auto &[tag, obj] : UI_elements){
+        for (const auto &[tag, obj] : assets.elements){
             if(obj.visible){
                 SDL_SetRenderDrawColor(gui.renderer, 255, 192, 203, 255);
                 SDL_FRect frect1;
@@ -188,15 +186,6 @@ launch_game(game_data &data, std::map<std::string, UI_element> &UI_elements, gui
         }
         
         SDL_RenderPresent(gui.renderer);
-    }
-
-    for(auto &[tag, obj] : UI_elements){
-        for(auto &t : obj.texture){
-            SDL_DestroyTexture(t.SDL_texture);
-        }
-        for(auto &text : obj.text){
-            TTF_DestroyText(text.TTF_text);
-        }
     }
     //gui_core destructor handles rest of SDL and TTF destructions
 

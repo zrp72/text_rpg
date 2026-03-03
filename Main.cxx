@@ -23,17 +23,17 @@ int main(int argc, char** argv) {
     try {
 
         gui_core gui;
-        gui.add_font("roboto_light", "ttf files/Roboto-Light.ttf", 24, TTF_HORIZONTAL_ALIGN_CENTER);
+        
+        assets assets(gui);
 
-        std::map<std::string, UI_element> elements = create_UI_elements(gui, loaded_data);
-
-        if(elements.empty()){
+        assets.elements = create_UI_elements(gui, assets, loaded_data);
+        if(assets.elements.empty()){
             debug("Failed to create UI elements");
             return 1;
         }
 
-        if(launch_game(loaded_data, elements, gui)){
-            debug("Failed to present game");
+        if(launch_game(loaded_data, assets, gui)){
+            debug("Failed to launch game");
             return 1;
         }
 

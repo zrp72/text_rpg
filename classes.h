@@ -3,8 +3,10 @@
 #include <vector>
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
+#include <SDL3_image/SDL_image.h>
 #include <string>
 #include <functional>
+#include <filesystem>
 
 class item_instance {
 	public:
@@ -123,20 +125,14 @@ class gui_core {
 	}
 
 	~gui_core(){
+		for(auto &[tag, f] : fonts){
+			TTF_CloseFont(f);
+		}
 		TTF_DestroySurfaceTextEngine(text_engine);
 		SDL_DestroyRenderer(renderer);
 		SDL_DestroyWindow(window);
 		TTF_Quit();
 		SDL_Quit();
-	}
-
-	void add_font(std::string tag, std::string filepath, int font_size, TTF_HorizontalAlignment alignment){
-		TTF_Font* font = TTF_OpenFont(filepath.data(), font_size);
-		if(!font){
-			SDL_Log("Failed to load %s font: %s", tag, SDL_GetError());
-		}
-		TTF_SetFontWrapAlignment(font, alignment);
-		fonts[tag] = font;
 	}
 };
 
@@ -181,6 +177,8 @@ class relative_texture {
 	std::function<void(game_data&)> click_events;
 
 	relative_texture(){};
+	relative_texture(SDL_Texture* t, relative_rect s, relative_rect d)
+	:SDL_texture(t), srcrect(s), dstrect(d){};
 };
 
 class UI_element {
@@ -193,7 +191,7 @@ class UI_element {
     bool visible = false;
 
     UI_element(){};
-
+	
 	void determine_area(){
 
 		float min_x = 1;
@@ -221,15 +219,67 @@ class UI_element {
 
 	void add_text(gui_core& gui, 
 		const char* txt, 
-		std::string font, 
+		TTF_Font* font, 
 		SDL_Color color, 
 		relative_rect txtmask,
 		float rel_x, float rel_y, float rel_wrap){
-			TTF_Text* TTF_text = TTF_CreateText(gui.text_engine, gui.fonts[font], txt, 0);
-			TTF_SetTextColor(TTF_text, color.r, color.g, color.b, color.a);
+
+			TTF_Text* TTF_text = TTF_CreateText(gui.text_engine, font, txt, 0);
 			if(!TTF_text){
 				SDL_Log("Failed to add text: %s\n", SDL_GetError());
 			}
+			TTF_SetTextColor(TTF_text, color.r, color.g, color.b, color.a);
 			text.push_back(relative_text(TTF_text, txtmask, rel_x, rel_y, rel_wrap));
 		}
+	
+	void add_texture(gui_core& gui, 
+		SDL_Texture* SDL_texture, 
+		relative_rect srcrect, 
+		relative_rect dstrect, 
+		std::function<void(std::map<std::string, UI_element>, game_data&)> click_events){
+
+			float width, height;
+			SDL_GetTextureSize(SDL_texture, &width, &height);
+			int x = srcrect.relative_x * width;
+			int y = srcrect.relative_y * height;
+			int w = srcrect.relative_w * width;
+			int h = srcrect.relative_h * height;
+			
+			srcrect.SDL_rect = {x, y, w, h};
+			texture.push_back(relative_texture(SDL_texture, srcrect, dstrect));
+		}
+};
+
+class assets {
+	public:
+	std::map<std::string, TTF_Font*> fonts;
+	std::map<std::string, SDL_Texture*> textures;
+	std::map<std::string, UI_element> elements;
+
+	assets(gui_core& gui){
+		std::filesystem::path original_path(std::filesystem::current_path());
+		std::filesystem::current_path("ttf files");
+		fonts["roboto_light"] = TTF_OpenFont("Roboto-Light.ttf", 24);
+		TTF_SetFontWrapAlignment(fonts["roboto_light"], TTF_HORIZONTAL_ALIGN_CENTER);
+
+		std::filesystem::current_path(original_path / "assets");
+
+		textures["option_border"] = IMG_LoadTexture(gui.renderer, "option_border.png");
+		SDL_SetTextureBlendMode(textures["option_border"], SDL_BLENDMODE_BLEND);
+
+		std::filesystem::current_path(original_path);
+	}
+	~assets(){
+		for(auto& [tag, f] : fonts){
+			TTF_CloseFont(f);
+		}
+		for(auto& [tag, t] : textures){
+			SDL_DestroyTexture(t);
+		}
+		for(auto& [tag, e] : elements){
+			for(auto& t : e.text){
+				TTF_DestroyText(t.TTF_text);
+			}
+		}
+	}
 };
