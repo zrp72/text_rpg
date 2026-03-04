@@ -132,13 +132,19 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
                 }
             }
 
+            bool clicked = false;
             if(event.type == SDL_EVENT_MOUSE_BUTTON_DOWN){
                 for(auto& [tag, obj] : assets.elements){
                     for(auto& texture : obj.texture){
-                        /*if(SDL_PointInRect(&mouse_pos, &texture.dstrect.SDL_rect)){
-                            
-                        }*/
+                        if(SDL_PointInRect(&mouse_pos, &texture.dstrect.SDL_rect)){
+                            if(texture.click_events){
+                                texture.click_events(data, assets, gui);
+                                clicked  = true;
+                                break;
+                            }
+                        }
                     }
+                    if(clicked){break;}
                 }
             }
         }

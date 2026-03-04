@@ -5,7 +5,7 @@
 
 #define debug(x) std::cout << x
 
-UI_element 
+int
 create_story_display(gui_core& gui, assets& assets, game_data& data){
     UI_element element;
     const char* story_text = data.story[data.story_location].text.c_str();
@@ -19,11 +19,12 @@ create_story_display(gui_core& gui, assets& assets, game_data& data){
 
     element.determine_area();
     element.visible = true;
-    return element;
+    assets.elements.emplace("story_display", element);
+    return 0;
 }
 
-UI_element
-create_option_display(gui_core& gui, assets& assets, game_data& data){
+int
+create_option_display(gui_core& gui, assets& main_assets, game_data& data){
     UI_element element;
 
     int column = 0;
@@ -42,18 +43,18 @@ create_option_display(gui_core& gui, assets& assets, game_data& data){
         const char* prompt = option.prompt.c_str();
         element.add_text(gui, 
             prompt, 
-            assets.fonts["roboto_light"], 
+            main_assets.fonts["roboto_light"], 
             SDL_Color(255, 255, 255, 255), 
             mask, 
             x_pos, y_pos, .3);
 
         element.add_texture(gui, 
-            assets.textures["option_border"], 
+            main_assets.textures["option_border"], 
             //using the entire window as source rect, not intended, fix
             relative_rect(), 
             relative_rect(x_pos -.05, y_pos, .4, .05), 
-            [=](std::map<std::string, UI_element> elements, game_data& data){
-                progress_story(elements, data, iteration);
+            [=](game_data& data, assets& assets, gui_core& gui){
+                progress_story(data, assets, gui, iteration);
             });
         ++column;
         ++iteration;
@@ -63,15 +64,16 @@ create_option_display(gui_core& gui, assets& assets, game_data& data){
 
     element.determine_area();
     element.visible = true;
-    return element;
+    main_assets.elements.emplace("option_display", element);
+    return 0;
 }
 
-std::map<std::string, UI_element>
+int
 create_UI_elements(gui_core& gui, assets& assets, game_data& data){
-    std::map<std::string, UI_element> elements;
+    auto elements = assets.elements;
 
-    elements["story_display"] = create_story_display(gui, assets, data);
-    elements["option_display"] = create_option_display(gui, assets, data);
+    create_story_display(gui, assets, data);
+    create_option_display(gui, assets, data);
 
-    return elements;
+    return 0;
 }

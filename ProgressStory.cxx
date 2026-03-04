@@ -159,30 +159,41 @@ check_for_change_maps(game_data &data, auto &search_target){
 }
 
 int
-update_UI(std::map<std::string, UI_element>& elements, game_data& data){
-	auto o = elements["option_display"];
-	auto p = elements["story_display"];
+update_UI(game_data& data, assets& assets, gui_core& gui){
+	auto s = assets.elements["story_display"];
+	auto o = assets.elements["option_display"];
+
+	paragraph p = data.story[data.story_location];
+	s.text[0].TTF_text->text = p.text.data();
+
+	create_option_display(gui, assets, data);
+	return 0;
 }
 
 int
-progress_story(std::map<std::string, UI_element>& elements, game_data &data, int choice){
+progress_story(game_data &data, assets& main_assets, gui_core& gui, int choice){
 	paragraph p = data.story[data.story_location];
 
-	option c = p.options[choice];
-	debug("Dest label: " << c.dest_label << '\n');
-	std::string next_paragraph_tag = c.dest_label;
+	if(choice > p.options.size()){
+		debug("Clicked option does not exist");
+		return 1;
+	}else{
+		option c = p.options[choice - 1];
+		debug("Dest label: " << c.dest_label << '\n');
+		std::string next_paragraph_tag = c.dest_label;
 
-	check_for_change_maps(data, c);
+		check_for_change_maps(data, c);
 
-	debug(data.story[next_paragraph_tag].nexus << '\n');
-	if (data.story[next_paragraph_tag].nexus){
-		next_paragraph_tag = get_destination(data, data.story[next_paragraph_tag]);
+		debug(data.story[next_paragraph_tag].nexus << '\n');
+		if (data.story[next_paragraph_tag].nexus){
+			next_paragraph_tag = get_destination(data, data.story[next_paragraph_tag]);
+		}
+
+		data.story_location = next_paragraph_tag;
+		check_for_change_maps(data, data.story[data.story_location]);
+
+		update_UI(data, main_assets, gui);
+		//save_game(data);
 	}
-
-	data.story_location = next_paragraph_tag;
-	check_for_change_maps(data, data.story[data.story_location]);
-
-	update_UI(elements, data);
-	//save_game(data);
 	return 0;
 }

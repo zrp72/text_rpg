@@ -136,6 +136,8 @@ class gui_core {
 	}
 };
 
+class assets;
+
 class relative_rect {
     public:
     SDL_Rect SDL_rect;
@@ -174,11 +176,11 @@ class relative_texture {
 	SDL_Texture* SDL_texture;
 	relative_rect srcrect;
 	relative_rect dstrect;
-	std::function<void(game_data&)> click_events;
+	std::function<void(game_data&, assets&, gui_core&)> click_events;
 
 	relative_texture(){};
-	relative_texture(SDL_Texture* t, relative_rect s, relative_rect d)
-	:SDL_texture(t), srcrect(s), dstrect(d){};
+	relative_texture(SDL_Texture* t, relative_rect s, relative_rect d, std::function<void(game_data&, assets&, gui_core&)> c)
+	:SDL_texture(t), srcrect(s), dstrect(d), click_events(c){};
 };
 
 class UI_element {
@@ -191,6 +193,14 @@ class UI_element {
     bool visible = false;
 
     UI_element(){};
+	~UI_element(){
+		for(auto& t : texture){
+			SDL_DestroyTexture(t.SDL_texture);
+		}
+		for(auto& t : text){
+			TTF_DestroyText(t.TTF_text);
+		}
+	}
 	
 	void determine_area(){
 
@@ -236,7 +246,7 @@ class UI_element {
 		SDL_Texture* SDL_texture, 
 		relative_rect srcrect, 
 		relative_rect dstrect, 
-		std::function<void(std::map<std::string, UI_element>, game_data&)> click_events){
+		std::function<void(game_data&, assets&, gui_core&)> click_events){
 
 			float width, height;
 			SDL_GetTextureSize(SDL_texture, &width, &height);
@@ -246,7 +256,7 @@ class UI_element {
 			int h = srcrect.relative_h * height;
 			
 			srcrect.SDL_rect = {x, y, w, h};
-			texture.push_back(relative_texture(SDL_texture, srcrect, dstrect));
+			texture.push_back(relative_texture(SDL_texture, srcrect, dstrect, click_events));
 		}
 };
 
@@ -258,12 +268,12 @@ class assets {
 
 	assets(gui_core& gui){
 		std::filesystem::path original_path(std::filesystem::current_path());
+
 		std::filesystem::current_path("ttf files");
 		fonts["roboto_light"] = TTF_OpenFont("Roboto-Light.ttf", 24);
 		TTF_SetFontWrapAlignment(fonts["roboto_light"], TTF_HORIZONTAL_ALIGN_CENTER);
 
 		std::filesystem::current_path(original_path / "assets");
-
 		textures["option_border"] = IMG_LoadTexture(gui.renderer, "option_border.png");
 		SDL_SetTextureBlendMode(textures["option_border"], SDL_BLENDMODE_BLEND);
 
@@ -275,11 +285,6 @@ class assets {
 		}
 		for(auto& [tag, t] : textures){
 			SDL_DestroyTexture(t);
-		}
-		for(auto& [tag, e] : elements){
-			for(auto& t : e.text){
-				TTF_DestroyText(t.TTF_text);
-			}
 		}
 	}
 };
