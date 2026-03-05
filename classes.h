@@ -273,11 +273,13 @@ class assets {
 	}
 
 	~assets(){
-		/*for(auto& [tag, e] : elements){
+		for(auto& [tag, e] : elements){
 			for(auto& t : e.text){
-				TTF_DestroyText(t.TTF_text);
+				if(t.TTF_text){
+					TTF_DestroyText(t.TTF_text);
+				}
 			}
-		}*/
+		}
 		for(auto& [tag, f] : fonts){
 			TTF_CloseFont(f);
 		}

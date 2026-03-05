@@ -48,13 +48,13 @@ create_option_display(gui_core& gui, assets& main_assets, game_data& data){
             x_pos, y_pos, .3);
 
         element.add_texture(gui, 
-            main_assets.textures["option_border"], 
-            //using the entire window as source rect, not intended, fix
+            main_assets.textures["option_border"],
             relative_rect(), 
             relative_rect(x_pos -.05, y_pos, .4, .05), 
             [=](game_data& data, assets& assets, gui_core& gui){
                 progress_story(data, assets, gui, iteration);
             });
+            
         ++column;
         ++iteration;
     }
