@@ -161,10 +161,10 @@ check_for_change_maps(game_data &data, auto &search_target){
 int
 update_UI(game_data& data, assets& assets, gui_core& gui){
 	auto s = assets.elements["story_display"];
-	auto o = assets.elements["option_display"];
 
 	paragraph p = data.story[data.story_location];
-	s.text[0].TTF_text->text = p.text.data();
+	debug(p.text.data());
+	TTF_SetTextString(s.text[0].TTF_text, p.text.data(), 0);
 
 	create_option_display(gui, assets, data);
 	return 0;
