@@ -17,9 +17,8 @@ create_story_display(gui_core& gui, assets& assets, game_data& data){
         relative_rect(.15, .1, .7, .5), 
         .15, .1, .7);
 
-    element.determine_area();
-    element.visible = true;
-    assets.elements.emplace("story_display", element);
+    assets.add_element("story_display", element);
+    assets.elements["story_display"].visible = true;
     return 0;
 }
 
@@ -62,9 +61,8 @@ create_option_display(gui_core& gui, assets& main_assets, game_data& data){
 
     element.mask = relative_rect(.1, .7, .85, .3);
 
-    element.determine_area();
-    element.visible = true;
-    main_assets.elements.emplace("option_display", element);
+    main_assets.add_element("option_display", element);
+    main_assets.elements["option_display"].visible = true;
     return 0;
 }
 

@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
         
         assets assets(gui);
 
-        if(!create_UI_elements(gui, assets, loaded_data)){
+        if(create_UI_elements(gui, assets, loaded_data)){
             debug("Failed to create UI elements");
             return 1;
         }

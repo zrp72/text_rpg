@@ -193,14 +193,6 @@ class UI_element {
     bool visible = false;
 
     UI_element(){};
-	~UI_element(){
-		for(auto& t : texture){
-			SDL_DestroyTexture(t.SDL_texture);
-		}
-		for(auto& t : text){
-			TTF_DestroyText(t.TTF_text);
-		}
-	}
 	
 	void determine_area(){
 
@@ -279,12 +271,30 @@ class assets {
 
 		std::filesystem::current_path(original_path);
 	}
+
 	~assets(){
+		for(auto& [tag, e] : elements){
+			for(auto& t : e.text){
+				TTF_DestroyText(t.TTF_text);
+			}
+		}
 		for(auto& [tag, f] : fonts){
 			TTF_CloseFont(f);
 		}
 		for(auto& [tag, t] : textures){
 			SDL_DestroyTexture(t);
 		}
+	}
+
+	void add_element(std::string tag, UI_element& e){
+		e.determine_area();
+		if(elements.contains(tag)){
+			auto a = elements[tag];
+			for(auto& t : a.text){
+				TTF_DestroyText(t.TTF_text);
+			}
+			elements.erase(tag);
+		}
+		elements.emplace(tag, e);
 	}
 };
