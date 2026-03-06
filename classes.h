@@ -15,7 +15,7 @@ class item_instance {
 };
 
 class character {
-    public: 
+    public:
 	std::map<std::string, int> attributes = {
 		{"Reputation", 0},
 		{"Strenth", 0},
@@ -36,7 +36,7 @@ class option {
 	std::string dest_label;
 	std::map<std::string, int> stat_change_map;
     std::map<std::string, int> item_change_map;
-	
+
 	option(std::string p, std::string dest) : prompt(p), dest_label(dest){}
 };
 
@@ -48,7 +48,7 @@ class paragraph{
 	std::vector<option> options;
 	//for nexuses
 	bool nexus = false;
-	int visits = 0; 
+	int visits = 0;
 
 	paragraph() : text(""){}
 	paragraph(std::string t) : text(t){}
@@ -88,7 +88,7 @@ class game_data {
 	std::map<std::string, item> items;
 	character player;
 
-	game_data(auto s, std::string l, auto i, character p) 
+	game_data(auto s, std::string l, auto i, character p)
 	: story(s), story_location(l), items(i), player(p){};
 };
 
@@ -97,17 +97,16 @@ class gui_core {
 	SDL_Window* window;
 	SDL_Renderer* renderer;
 	TTF_TextEngine* text_engine;
-	std::map<std::string, TTF_Font*> fonts;
 
 	gui_core(){
 		if(!SDL_Init(SDL_INIT_VIDEO)){
 			throw std::runtime_error(SDL_GetError());
 		}
-		
+
 		if(!TTF_Init()){
 			throw std::runtime_error(SDL_GetError());
 		}
-		
+
 		window = SDL_CreateWindow("Test", 800, 600, SDL_WINDOW_RESIZABLE);
 		if(!window){
 			throw std::runtime_error(SDL_GetError());
@@ -125,9 +124,6 @@ class gui_core {
 	}
 
 	~gui_core(){
-		for(auto &[tag, f] : fonts){
-			TTF_CloseFont(f);
-		}
 		TTF_DestroySurfaceTextEngine(text_engine);
 		SDL_DestroyRenderer(renderer);
 		SDL_DestroyWindow(window);
@@ -154,7 +150,9 @@ class relative_rect {
 
 class relative_text {
 	public:
-	TTF_Text* TTF_text;
+	std::string text;
+	std::string font_ID;
+	SDL_Color color;
 	relative_rect mask;
 	float relative_x;
 	float relative_y;
@@ -164,23 +162,24 @@ class relative_text {
 	float height;
 	float x;
 	float y;
+	float wrap_width;
 	int scroll_y;
 
 	relative_text(){};
-	relative_text(TTF_Text* t, relative_rect m, float x, float y, float w)
-	: TTF_text(t), mask(m), relative_x(x), relative_y(y), relative_wrap_width(w){};
+	relative_text(std::string t, std::string f, SDL_Color c, relative_rect m, float x, float y, float w)
+	: text(t), font_ID(f), color(c), mask(m), relative_x(x), relative_y(y), relative_wrap_width(w){};
 };
 
 class relative_texture {
 	public:
-	SDL_Texture* SDL_texture;
-	relative_rect srcrect;
+	std::string texture_ID;
+	SDL_Rect srcrect;
 	relative_rect dstrect;
 	std::function<void(game_data&, assets&, gui_core&)> click_events;
 
 	relative_texture(){};
-	relative_texture(SDL_Texture* t, relative_rect s, relative_rect d, std::function<void(game_data&, assets&, gui_core&)> c)
-	:SDL_texture(t), srcrect(s), dstrect(d), click_events(c){};
+	relative_texture(std::string t, SDL_Rect s, relative_rect d, std::function<void(game_data&, assets&, gui_core&)> c)
+	:texture_ID(t), srcrect(s), dstrect(d), click_events(c){};
 };
 
 class UI_element {
@@ -192,10 +191,9 @@ class UI_element {
 	int scroll_y = 0;
     bool visible = false;
 
-    UI_element(){};
-	
-	void determine_area(){
+    UI_element(){}
 
+	void determine_area(){
 		float min_x = 1;
 		float min_y = 1;
 		float top_w = 0;
@@ -218,38 +216,6 @@ class UI_element {
 
 		area = {min_x, min_y, top_w - min_x, top_h - min_y};
 	}
-
-	void add_text(gui_core& gui, 
-		const char* txt, 
-		TTF_Font* font, 
-		SDL_Color color, 
-		relative_rect txtmask,
-		float rel_x, float rel_y, float rel_wrap){
-
-			TTF_Text* TTF_text = TTF_CreateText(gui.text_engine, font, txt, 0);
-			if(!TTF_text){
-				SDL_Log("Failed to add text: %s\n", SDL_GetError());
-			}
-			TTF_SetTextColor(TTF_text, color.r, color.g, color.b, color.a);
-			text.push_back(relative_text(TTF_text, txtmask, rel_x, rel_y, rel_wrap));
-		}
-	
-	void add_texture(gui_core& gui, 
-		SDL_Texture* SDL_texture, 
-		relative_rect srcrect, 
-		relative_rect dstrect, 
-		std::function<void(game_data&, assets&, gui_core&)> click_events){
-
-			float width, height;
-			SDL_GetTextureSize(SDL_texture, &width, &height);
-			int x = srcrect.relative_x * width;
-			int y = srcrect.relative_y * height;
-			int w = srcrect.relative_w * width;
-			int h = srcrect.relative_h * height;
-			
-			srcrect.SDL_rect = {x, y, w, h};
-			texture.push_back(relative_texture(SDL_texture, srcrect, dstrect, click_events));
-		}
 };
 
 class assets {
@@ -273,13 +239,6 @@ class assets {
 	}
 
 	~assets(){
-		for(auto& [tag, e] : elements){
-			for(auto& t : e.text){
-				if(t.TTF_text){
-					TTF_DestroyText(t.TTF_text);
-				}
-			}
-		}
 		for(auto& [tag, f] : fonts){
 			TTF_CloseFont(f);
 		}
@@ -290,13 +249,14 @@ class assets {
 
 	void add_element(std::string tag, UI_element& e){
 		e.determine_area();
-		if(elements.contains(tag)){
-			auto a = elements[tag];
-			for(auto& t : a.text){
-				TTF_DestroyText(t.TTF_text);
-			}
-			elements.erase(tag);
-		}
-		elements.emplace(tag, e);
+		elements.erase(tag);
+		elements[tag] = e;
+	}
+
+	SDL_Rect get_texture_srcrect(std::string tag){
+		float width, height;
+		SDL_GetTextureSize(textures[tag], &width, &height);
+		SDL_Rect srcrect(0, 0, width, height);
+		return srcrect;
 	}
 };

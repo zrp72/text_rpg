@@ -50,4 +50,6 @@ Exhausted: As the guards come into view, your eyesight dims before everything go
 
 Wilderness: The grasses roll across the hills before you.
 
+{Wilderness:Start} Turn back
+
 Testing: It works!

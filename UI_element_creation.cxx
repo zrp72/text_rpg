@@ -8,17 +8,18 @@
 int
 create_story_display(gui_core& gui, assets& assets, game_data& data){
     UI_element element;
-    const char* story_text = data.story[data.story_location].text.c_str();
+    std::string story_text = data.story[data.story_location].text.c_str();
 
-    element.add_text(gui, 
-        story_text, 
-        assets.fonts["roboto_light"], 
-        SDL_Color(255, 255, 255, 255), 
-        relative_rect(.15, .1, .7, .5), 
-        .15, .1, .7);
+    element.text.push_back(relative_text(
+        story_text,
+        "roboto_light",
+        SDL_Color(255, 255, 255, 255),
+        relative_rect(.15, .1, .7, .5),
+        .15, .1, .7
+    ));
 
+    element.visible = true;
     assets.add_element("story_display", element);
-    assets.elements["story_display"].visible = true;
     return 0;
 }
 
@@ -33,6 +34,7 @@ create_option_display(gui_core& gui, assets& main_assets, game_data& data){
 
     int iteration = 1;
     for(auto& option : data.story[data.story_location].options){
+        debug(option.prompt << '\n');
         if(column > 1){row++; column = 0;}
 
         float x_pos = .15 + .4 * column;
@@ -40,35 +42,36 @@ create_option_display(gui_core& gui, assets& main_assets, game_data& data){
         relative_rect mask(x_pos, y_pos, column_w, column_h);
 
         const char* prompt = option.prompt.c_str();
-        element.add_text(gui, 
+        element.text.push_back(relative_text(
             prompt, 
-            main_assets.fonts["roboto_light"], 
+            "roboto_light", 
             SDL_Color(255, 255, 255, 255), 
             mask, 
-            x_pos, y_pos, .3);
+            x_pos, y_pos, .3
+        ));
 
-        element.add_texture(gui, 
-            main_assets.textures["option_border"],
-            relative_rect(), 
-            relative_rect(x_pos -.05, y_pos, .4, .05), 
+        element.texture.push_back(relative_texture(
+            "option_border",
+            main_assets.get_texture_srcrect("option_border"),
+            relative_rect(x_pos -.05, y_pos, .4, .05),
             [=](game_data& data, assets& assets, gui_core& gui){
                 progress_story(data, assets, gui, iteration);
-            });
-            
+            }
+        ));
+
         ++column;
         ++iteration;
     }
 
     element.mask = relative_rect(.1, .7, .85, .3);
+    element.visible = true;
 
     main_assets.add_element("option_display", element);
-    main_assets.elements["option_display"].visible = true;
     return 0;
 }
 
 int
 create_UI_elements(gui_core& gui, assets& assets, game_data& data){
-    auto elements = assets.elements;
 
     create_story_display(gui, assets, data);
     create_option_display(gui, assets, data);

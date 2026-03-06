@@ -12,19 +12,19 @@ TTF_GetStringSize
 
 #include "functions.h"
 
-#define debug(x)  std::cout << x 
+#define debug(x)  std::cout << x
 
 void
-resize_text_elements(relative_text &t, SDL_Window* window){
+resize_text_elements(relative_text &t, SDL_Window* window, assets& assets){
     int window_width;
     int window_height;
     SDL_GetWindowSizeInPixels(window, &window_width, &window_height);
 
-    TTF_SetTextWrapWidth(t.TTF_text, window_width * t.relative_wrap_width);
+    t.wrap_width = window_width * t.relative_wrap_width;
 
     int text_width;
     int text_height;
-    TTF_GetTextSize(t.TTF_text, &text_width, &text_height);
+    TTF_GetStringSize(assets.fonts[t.font_ID], t.text.data(), 0, &text_width, &text_height);
     t.width = text_width;
     t.height = text_height;
 
@@ -45,13 +45,7 @@ resize_rects(relative_rect &rect, SDL_Window* window){
     rect.SDL_rect.h = window_height * rect.relative_h;
 }
 
-void
-update_paragraph_text(UI_element &paragraph_element, game_data &data){
-    char* new_text = data.story[data.story_location].text.data();
-    paragraph_element.text[0].TTF_text->text = new_text;
-}
-
-int 
+int
 launch_game(game_data &data, assets& assets, gui_core& gui){
 
 
@@ -60,7 +54,7 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
             resize_rects(texture.dstrect, gui.window);
         }
         for(auto &text : obj.text){
-            resize_text_elements(text, gui.window);
+            resize_text_elements(text, gui.window, assets);
             resize_rects(text.mask, gui.window);
         }
     resize_rects(obj.area, gui.window);
@@ -68,6 +62,7 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
     }
 
     bool running = true;
+    TTF_Text* TTF_Text= TTF_CreateText(gui.text_engine, assets.fonts["roboto_light"], "a", 0);
     float mouse_x;
     float mouse_y;
     SDL_Point mouse_pos;
@@ -86,7 +81,7 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
                         resize_rects(texture.dstrect, gui.window);
                     }
                     for(auto &text : obj.text){
-                        resize_text_elements(text, gui.window);
+                        resize_text_elements(text, gui.window, assets);
                         resize_rects(text.mask, gui.window);
                     }
                 resize_rects(obj.area, gui.window);
@@ -139,7 +134,7 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
                         if(SDL_PointInRect(&mouse_pos, &texture.dstrect.SDL_rect)){
                             if(texture.click_events){
                                 texture.click_events(data, assets, gui);
-                                clicked  = true;
+                                clicked = true;
                                 break;
                             }
                         }
@@ -151,7 +146,7 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
 
         SDL_SetRenderDrawColor(gui.renderer, 0, 0, 0, 255);
         SDL_RenderClear(gui.renderer);
-        
+
         for (const auto &[tag, obj] : assets.elements){
             if(obj.visible){
                 SDL_SetRenderDrawColor(gui.renderer, 255, 192, 203, 255);
@@ -163,37 +158,44 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
                 for(auto &t : obj.texture){
                     SDL_FRect srcrect;
                     SDL_FRect dstrect;
-                    SDL_RectToFRect(&t.srcrect.SDL_rect, &srcrect);
+                    SDL_RectToFRect(&t.srcrect, &srcrect);
                     SDL_RectToFRect(&t.dstrect.SDL_rect, &dstrect);
                     dstrect.y -= obj.scroll_y;
-                    //add getrectintersection
 
-                    SDL_RenderTexture(gui.renderer, t.SDL_texture, &srcrect, &dstrect);
+                    SDL_Texture* texture = assets.textures[t.texture_ID];
+
+                    SDL_RenderTexture(gui.renderer, texture, &srcrect, &dstrect);
                 }
 
-                for(auto &text : obj.text){
-                    SDL_Rect original_mask = text.mask.SDL_rect; 
+                for(auto &t : obj.text){
+                    SDL_Rect original_mask = t.mask.SDL_rect;
                     original_mask.y -= obj.scroll_y;
+
                     SDL_Rect mask;
-                    
-                    
                     if(SDL_GetRectIntersection(&original_mask, &obj.mask.SDL_rect, &mask)){
                         SDL_SetRenderClipRect(gui.renderer, &mask);
+
+                        TTF_SetTextString(TTF_Text, t.text.data(), 0);
+                        TTF_SetTextFont(TTF_Text, assets.fonts[t.font_ID]);
+                        TTF_SetTextColor(TTF_Text, t.color.r, t.color.g, t.color.b, t.color.a);
+                        TTF_SetTextWrapWidth(TTF_Text, t.wrap_width);
+
                         SDL_SetRenderDrawColor(gui.renderer, 255, 255, 255, 255);
                         SDL_FRect frect;
                         SDL_RectToFRect(&mask, &frect);
                         SDL_RenderRect(gui.renderer, &frect);
 
-                        TTF_DrawRendererText(text.TTF_text, text.x, text.y - text.scroll_y - obj.scroll_y);
+                        TTF_DrawRendererText(TTF_Text, t.x, t.y - t.scroll_y - obj.scroll_y);
                     }
+                    debug("Text drawn\n");
                 }
                 SDL_SetRenderClipRect(gui.renderer, NULL);
             }
         }
-        
+
         SDL_RenderPresent(gui.renderer);
     }
-    //gui_core destructor handles rest of SDL and TTF destructions
+    TTF_DestroyText(TTF_Text);
 
     return 0;
 }

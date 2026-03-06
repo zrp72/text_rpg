@@ -62,7 +62,7 @@ read_nexus_conditions(std::string conditions, game_data &data, paragraph &nexus)
 			}else{
 				viable = false;
 			}
-			
+
 		}else if (check.find_first_not_of("1234567890") != std::string::npos){
 			viable = does_stash_contain(var, check, data);
 
@@ -102,7 +102,7 @@ get_destination(game_data &data, paragraph &par_nexus){
 			std::string conditions = line.substr(conditions_start);
 
 			bool viable = read_nexus_conditions(conditions, data, par_nexus);
-			
+
 			if (viable){
             	destination = dest_ver;
         	}
@@ -111,14 +111,14 @@ get_destination(game_data &data, paragraph &par_nexus){
     return destination;
 }
 
-/*void 
+/*void
 save_game(game_data active_data){
 	std::ofstream save_data;
 	save_data.open("save_data");
 	save_data.close();
 }*/
 
-void 
+void
 alter_inventory(game_data &data, auto &st){
 	int open_inventory_space = data.player.inventory_size - data.player.inventory.size();
 	int map_size = st.item_change_map.size();
@@ -148,9 +148,9 @@ check_for_change_maps(game_data &data, auto &search_target){
 	auto &st = search_target;
 	if (!st.stat_change_map.empty()){
 		for (const auto &[target, difference] : st.stat_change_map) {
-			debug(target << ": " << data.player.attributes[target] << '\n'); 
+			debug(target << ": " << data.player.attributes[target] << '\n');
 			data.player.attributes[target] = data.player.attributes[target] + difference;
-			debug(target << ": " << data.player.attributes[target] << '\n'); 
+			debug(target << ": " << data.player.attributes[target] << '\n');
 		}
 	}
 	if (!st.item_change_map.empty()){
@@ -164,9 +164,10 @@ update_UI(game_data& data, assets& assets, gui_core& gui){
 
 	paragraph p = data.story[data.story_location];
 	debug(p.text.data());
-	TTF_SetTextString(s.text[0].TTF_text, p.text.data(), 0);
 
+	s.text[0].text = p.text;
 	create_option_display(gui, assets, data);
+
 	return 0;
 }
 
@@ -184,7 +185,7 @@ progress_story(game_data &data, assets& main_assets, gui_core& gui, int choice){
 
 		check_for_change_maps(data, c);
 
-		debug(data.story[next_paragraph_tag].nexus << '\n');
+		debug("Is nexus: " << data.story[next_paragraph_tag].nexus << '\n');
 		if (data.story[next_paragraph_tag].nexus){
 			next_paragraph_tag = get_destination(data, data.story[next_paragraph_tag]);
 		}

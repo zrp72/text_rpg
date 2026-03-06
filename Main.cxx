@@ -5,7 +5,7 @@
 
 #include "functions.h"
 
-#define debug(x)  std::cout << x 
+#define debug(x)  std::cout << x
 
 
 int main(int argc, char** argv) {
@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
     try {
 
         gui_core gui;
-        
+
         assets assets(gui);
 
         if(create_UI_elements(gui, assets, loaded_data)){

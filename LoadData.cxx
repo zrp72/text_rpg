@@ -221,7 +221,7 @@ void parse_nexus(std::stringstream &story, std::string line, std::map<std::strin
 	story_map[tag] = paragraph(text, nexus);
 }
 
-std::map<std::string, paragraph> 
+std::map<std::string, paragraph>
 parse_story(const std::string &writtenStory) {
 	std::map<std::string, paragraph> story_map;
 	std::stringstream story(writtenStory);
@@ -283,7 +283,7 @@ load_items(const std::string &itemCatalog){
 			continue;
 		}
 		if (line[0] == ' '){
-			std::cerr << "Item ID has preceding spaces: " 
+			std::cerr << "Item ID has preceding spaces: "
             << std::strerror(errno);
 		}
 
@@ -298,11 +298,11 @@ load_items(const std::string &itemCatalog){
 	return items;
 }
 
-std::string 
+std::string
 open_file(std::string path){
 	std::ifstream file(path);
 	if (!file) {
-    	std::cerr << "Error opening file: " 
+    	std::cerr << "Error opening file: "
             << std::strerror(errno);
 	}
 	std::stringstream read_file;
@@ -318,7 +318,7 @@ open_files(){
 	return opened_files;
 }
 
-game_data 
+game_data
 load_game(){
 	files files = open_files();
 	character player;
