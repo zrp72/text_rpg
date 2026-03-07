@@ -45,6 +45,19 @@ resize_rects(relative_rect &rect, SDL_Window* window){
     rect.SDL_rect.h = window_height * rect.relative_h;
 }
 
+void
+resize_element(UI_element &obj, SDL_Window* window, assets& assets){
+    for (auto &texture : obj.texture) {
+        resize_rects(texture.dstrect, window);
+    }
+    for (auto &text : obj.text) {
+        resize_text_elements(text, window, assets);
+        resize_rects(text.mask, window);
+    }
+    resize_rects(obj.area, window);
+    resize_rects(obj.mask, window);
+}
+
 int
 launch_game(game_data &data, assets& assets, gui_core& gui){
 
