@@ -18,9 +18,10 @@ create_story_display(gui_core& gui, assets& assets, game_data& data){
 		.15, .1, .7
 	));
 
-	element.visible = true;
-	assets.add_element("story_display", element);
-	return 0;
+    element.visible = true;
+    assets.add_element("story_display", element);
+    resize_element(assets.elements["story_display"], gui.window, assets);
+    return 0;
 }
 
 int
@@ -71,7 +72,8 @@ create_option_display(gui_core& gui, assets& main_assets, game_data& data){
 	//debug("Element text 0" << element.text[0].text << '\n');
 	debug("Element text vector size: " << element.text.size() << '\n');
 
-	main_assets.add_element("option_display", element);
+    main_assets.add_element("option_display", element);
+    resize_element(main_assets.elements["option_display"], gui.window, main_assets);
 
 	return 0;
 }
