@@ -30,6 +30,10 @@ resize_text_elements(relative_text &t, SDL_Window* window, assets& assets){
 
 	t.x = window_width * t.relative_x;
 	t.y = window_height * t.relative_y;
+
+	int max_scroll = t.height - t.mask.SDL_rect.h;
+	max_scroll = std::max(0, max_scroll);
+	t.scroll_y = std::clamp(t.scroll_y, 0, max_scroll);
 }
 
 void
@@ -47,15 +51,19 @@ resize_rects(relative_rect &rect, SDL_Window* window){
 
 void
 resize_element(UI_element &obj, SDL_Window* window, assets& assets){
+    resize_rects(obj.area, window);
+    resize_rects(obj.mask, window);
     for (auto &texture : obj.texture) {
         resize_rects(texture.dstrect, window);
     }
     for (auto &text : obj.text) {
-        resize_text_elements(text, window, assets);
         resize_rects(text.mask, window);
+        resize_text_elements(text, window, assets);
     }
-    resize_rects(obj.area, window);
-    resize_rects(obj.mask, window);
+
+	int max_scroll = obj.area.SDL_rect.h - obj.mask.SDL_rect.h;
+	max_scroll = std::max(0, max_scroll);
+	obj.scroll_y = std::clamp(obj.scroll_y, 0, max_scroll);
 }
 
 int
@@ -77,15 +85,7 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
 
 			if(event.type == SDL_EVENT_WINDOW_RESIZED){
 				for(auto &[tag, obj] : assets.elements){
-					for(auto &texture : obj.texture){
-						resize_rects(texture.dstrect, gui.window);
-					}
-					for(auto &text : obj.text){
-						resize_text_elements(text, gui.window, assets);
-						resize_rects(text.mask, gui.window);
-					}
-				resize_rects(obj.area, gui.window);
-				resize_rects(obj.mask, gui.window);
+					resize_element(obj, gui.window, assets);
 				}
 			}
 
