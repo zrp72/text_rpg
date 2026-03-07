@@ -24,7 +24,7 @@ resize_text_elements(relative_text &t, SDL_Window* window, assets& assets){
 
     int text_width;
     int text_height;
-    TTF_GetStringSize(assets.fonts[t.font_ID], t.text.data(), 0, &text_width, &text_height);
+    TTF_GetStringSizeWrapped(assets.fonts[t.font_ID], t.text.data(), 0, t.wrap_width, &text_width, &text_height);
     t.width = text_width;
     t.height = text_height;
 
@@ -57,8 +57,8 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
             resize_text_elements(text, gui.window, assets);
             resize_rects(text.mask, gui.window);
         }
-    resize_rects(obj.area, gui.window);
-    resize_rects(obj.mask, gui.window);
+        resize_rects(obj.area, gui.window);
+        resize_rects(obj.mask, gui.window);
     }
 
     bool running = true;
@@ -127,8 +127,9 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
                 }
             }
 
-            bool clicked = false;
             if(event.type == SDL_EVENT_MOUSE_BUTTON_DOWN){
+                bool clicked = false;
+
                 for(auto& [tag, obj] : assets.elements){
                     for(auto& texture : obj.texture){
                         if(SDL_PointInRect(&mouse_pos, &texture.dstrect.SDL_rect)){
@@ -180,14 +181,17 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
                         TTF_SetTextColor(TTF_Text, t.color.r, t.color.g, t.color.b, t.color.a);
                         TTF_SetTextWrapWidth(TTF_Text, t.wrap_width);
 
+
+
                         SDL_SetRenderDrawColor(gui.renderer, 255, 255, 255, 255);
                         SDL_FRect frect;
                         SDL_RectToFRect(&mask, &frect);
                         SDL_RenderRect(gui.renderer, &frect);
 
+                        
+
                         TTF_DrawRendererText(TTF_Text, t.x, t.y - t.scroll_y - obj.scroll_y);
                     }
-                    debug("Text drawn\n");
                 }
                 SDL_SetRenderClipRect(gui.renderer, NULL);
             }

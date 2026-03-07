@@ -249,8 +249,7 @@ class assets {
 
 	void add_element(std::string tag, UI_element& e){
 		e.determine_area();
-		elements.erase(tag);
-		elements[tag] = e;
+		elements.insert_or_assign(tag, e);
 	}
 
 	SDL_Rect get_texture_srcrect(std::string tag){

@@ -48,15 +48,16 @@ read_nexus_conditions(std::string conditions, game_data &data, paragraph &nexus)
 		int c_end = c.find_last_not_of(' ');
 
 		std::string var = c.substr(c_start, comparator - c_start);
-		std::string check = c.substr(comparator + 1, c_end + 1);
 
-		if (check == "True"){
+		std::string check = c.substr(comparator + 1, c_end - comparator);
+
+		if (check == "true"){
 			if (data.player.decisions[var]){
 				viable = true;
 			}else{
 				viable = false;
 			}
-		}else if (check == "False"){
+		}else if (check == "false"){
 			if (!data.player.decisions[var]){
 				viable = true;
 			}else{
@@ -69,7 +70,7 @@ read_nexus_conditions(std::string conditions, game_data &data, paragraph &nexus)
 		}else{
 			int value = std::stoi(check);
 
-			if (var == "Visits"){
+			if (var == "visits"){
 				viable = nexus.visits >= value;
 				continue;
 			}
@@ -160,12 +161,12 @@ check_for_change_maps(game_data &data, auto &search_target){
 
 int
 update_UI(game_data& data, assets& assets, gui_core& gui){
-	auto s = assets.elements["story_display"];
+	auto& s = assets.elements["story_display"];
 
 	paragraph p = data.story[data.story_location];
 	debug(p.text.data());
 
-	s.text[0].text = p.text;
+	s.text[s.text.size() - 1].text = p.text;
 	create_option_display(gui, assets, data);
 
 	return 0;

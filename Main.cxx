@@ -12,7 +12,7 @@ int main(int argc, char** argv) {
     debug("Original directory: " << std::filesystem::current_path() << '\n');
     std::string base_path = SDL_GetBasePath();
     std::filesystem::current_path(base_path);
-    debug("Original directory: " << std::filesystem::current_path() << '\n');
+    debug("New directory: " << std::filesystem::current_path() << '\n');
 
     game_data loaded_data = load_game();
     if(loaded_data.story.empty()){

@@ -8,7 +8,7 @@
 int
 create_story_display(gui_core& gui, assets& assets, game_data& data){
     UI_element element;
-    std::string story_text = data.story[data.story_location].text.c_str();
+    std::string story_text = data.story[data.story_location].text;
 
     element.text.push_back(relative_text(
         story_text,
@@ -35,13 +35,13 @@ create_option_display(gui_core& gui, assets& main_assets, game_data& data){
     int iteration = 1;
     for(auto& option : data.story[data.story_location].options){
         debug(option.prompt << '\n');
-        if(column > 1){row++; column = 0;}
+        if(column > 1){++row; column = 0;}
 
         float x_pos = .15 + .4 * column;
         float y_pos = .7 + .1 * row;
         relative_rect mask(x_pos, y_pos, column_w, column_h);
 
-        const char* prompt = option.prompt.c_str();
+        std::string prompt = option.prompt;
         element.text.push_back(relative_text(
             prompt, 
             "roboto_light", 
