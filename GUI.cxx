@@ -61,19 +61,6 @@ resize_element(UI_element &obj, SDL_Window* window, assets& assets){
 int
 launch_game(game_data &data, assets& assets, gui_core& gui){
 
-
-	for(auto &[tag, obj] : assets.elements){
-		for(auto &texture : obj.texture){
-			resize_rects(texture.dstrect, gui.window);
-		}
-		for(auto &text : obj.text){
-			resize_text_elements(text, gui.window, assets);
-			resize_rects(text.mask, gui.window);
-		}
-		resize_rects(obj.area, gui.window);
-		resize_rects(obj.mask, gui.window);
-	}
-
 	bool running = true;
 	TTF_Text* TTF_Text= TTF_CreateText(gui.text_engine, assets.fonts["roboto_light"], "a", 0);
 	float mouse_x;

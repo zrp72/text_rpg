@@ -166,7 +166,10 @@ update_UI(game_data& data, assets& assets, gui_core& gui){
 	paragraph p = data.story[data.story_location];
 	debug(p.text.data() << '\n');
 
-	s.text[s.text.size() - 1].text = p.text;
+	s.text[0].text = p.text;
+	resize_element(s, gui.window, assets);
+	s.text[0].scroll_y = 0;
+
 	create_option_display(gui, assets, data);
 
 	return 0;
