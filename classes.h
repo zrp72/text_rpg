@@ -229,10 +229,16 @@ class assets {
 
 		std::filesystem::current_path("ttf files");
 		fonts["roboto_light"] = TTF_OpenFont("Roboto-Light.ttf", 24);
+		if (!fonts["roboto_light"]) {
+			std::cerr << "Failed to load font: " << SDL_GetError() << '\n';
+		}
 		TTF_SetFontWrapAlignment(fonts["roboto_light"], TTF_HORIZONTAL_ALIGN_CENTER);
 
 		std::filesystem::current_path(original_path / "assets");
 		textures["option_border"] = IMG_LoadTexture(gui.renderer, "option_border.png");
+		if (!textures["option_border"]) {
+			std::cerr << "Failed to load texture: " << SDL_GetError() << '\n';
+		}
 		SDL_SetTextureBlendMode(textures["option_border"], SDL_BLENDMODE_BLEND);
 
 		std::filesystem::current_path(original_path);
