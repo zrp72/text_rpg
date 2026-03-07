@@ -179,7 +179,7 @@ class relative_texture {
 
 	relative_texture(){};
 	relative_texture(std::string t, SDL_Rect s, relative_rect d, std::function<void(game_data&, assets&, gui_core&)> c)
-	:texture_ID(t), srcrect(s), dstrect(d), click_events(c){};
+	: texture_ID(t), srcrect(s), dstrect(d), click_events(c){};
 };
 
 class UI_element {

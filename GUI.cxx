@@ -131,10 +131,13 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
                 bool clicked = false;
 
                 for(auto& [tag, obj] : assets.elements){
-                    for(auto& texture : obj.texture){
-                        if(SDL_PointInRect(&mouse_pos, &texture.dstrect.SDL_rect)){
-                            if(texture.click_events){
-                                texture.click_events(data, assets, gui);
+                    for(auto& t : obj.texture){
+                        SDL_Rect visible_dstrect(t.dstrect.SDL_rect);
+                        visible_dstrect.y -= obj.scroll_y;
+
+                        if(SDL_PointInRect(&mouse_pos, &visible_dstrect)){
+                            if(t.click_events){
+                                t.click_events(data, assets, gui);
                                 clicked = true;
                                 break;
                             }

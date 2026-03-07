@@ -38,7 +38,7 @@ std::string randomize_lineage(){
     std::mt19937 gen(rd());
     std::uniform_int_distribution<std::size_t> dist(0, options.size() - 1);
     lineage = options[dist(gen)];
-	std::cout << "Lineage: " << lineage << '\n';
+	debug("Lineage: " << lineage << '\n');
     return lineage;
 }
 
@@ -46,7 +46,7 @@ int
 find_operation(std::string line){
 	int operation = line.find_first_of("+-");
 	if (operation == std::string::npos){
-		debug("Operator not found: " << '\n');
+		debug("Mathematic operator not found: " << '\n');
 	}
 	return operation;
 }
@@ -75,7 +75,6 @@ create_stat_map(std::string changes){
     while(std::getline(s, current_change, ',')){
         int operation = find_operation(current_change);
 		size_t line_start = current_change.find_first_not_of(" (");
-		std::cout << line_start << '\n';
         std::string affected_stat = current_change.substr(line_start, operation - 2);
 		affected_stat = lowercase_string(affected_stat);
         int change = std::stoi(current_change.substr(operation));

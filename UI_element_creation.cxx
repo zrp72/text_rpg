@@ -35,6 +35,7 @@ create_option_display(gui_core& gui, assets& main_assets, game_data& data){
     int iteration = 1;
     for(auto& option : data.story[data.story_location].options){
         debug(option.prompt << '\n');
+        debug("Option iteration: " << iteration << '\n');
         if(column > 1){++row; column = 0;}
 
         float x_pos = .15 + .4 * column;
@@ -66,7 +67,11 @@ create_option_display(gui_core& gui, assets& main_assets, game_data& data){
     element.mask = relative_rect(.1, .7, .85, .3);
     element.visible = true;
 
+    //doesn't exist on second run???
+    debug("Element text 0" << element.text[0].text << '\n');
+
     main_assets.add_element("option_display", element);
+
     return 0;
 }
 

@@ -150,7 +150,7 @@ check_for_change_maps(game_data &data, auto &search_target){
 	if (!st.stat_change_map.empty()){
 		for (const auto &[target, difference] : st.stat_change_map) {
 			debug(target << ": " << data.player.attributes[target] << '\n');
-			data.player.attributes[target] = data.player.attributes[target] + difference;
+			data.player.attributes[target] += difference;
 			debug(target << ": " << data.player.attributes[target] << '\n');
 		}
 	}
@@ -164,7 +164,7 @@ update_UI(game_data& data, assets& assets, gui_core& gui){
 	auto& s = assets.elements["story_display"];
 
 	paragraph p = data.story[data.story_location];
-	debug(p.text.data());
+	debug(p.text.data() << '\n');
 
 	s.text[s.text.size() - 1].text = p.text;
 	create_option_display(gui, assets, data);
