@@ -84,12 +84,12 @@ read_nexus_conditions(std::string conditions, game_data &data, paragraph &nexus)
 std::string
 get_destination(game_data &data, paragraph &par_nexus){
 
-    std::string destination;
-    std::string line;
-    std::stringstream text(par_nexus.text);
+	std::string destination;
+	std::string line;
+	std::stringstream text(par_nexus.text);
 	++par_nexus.visits;
 
-    while (getline(text, line) && !line.empty()){
+	while (getline(text, line) && !line.empty()){
 		line = lowercase_string(line);
 		int colon = line.find(':');
 		int line_start = line.find_first_not_of(' ');
@@ -105,11 +105,11 @@ get_destination(game_data &data, paragraph &par_nexus){
 			bool viable = read_nexus_conditions(conditions, data, par_nexus);
 
 			if (viable){
-            	destination = dest_ver;
-        	}
+				destination = dest_ver;
+			}
 		}
-    }
-    return destination;
+	}
+	return destination;
 }
 
 /*void

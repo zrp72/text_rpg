@@ -18,7 +18,7 @@ SSSSSTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTEEEEEEEEEEEEEEEEEEEEEESSSSSSSSSSSSSSSSSSS
 TTTTTTTTTTTTTTTTTTEEEEEEEEEEEEEEEEEEEEEESSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTEEE
 EEEEEEEEEEEEEEEEEEESSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTTT
 
-{Start:Town}(Rep +1) Turn left
+{Start:Town}(Rep -15) Turn left
 {Start:Wilderness} Turn right
 {Start:Town}(Rep -15) Test?
 {Start:Wilderness} Turn right
@@ -40,6 +40,7 @@ Testing = Visits:5
 Villain:[ +1 Obliterator, +1 Healing Potion] The guards raise their swords as you approach.
 Who goes there?
 
+{Villain:Town} Loop back
 {Villain:Town} Loop back
 
 Neutral: The guards stand motionless as you pass.

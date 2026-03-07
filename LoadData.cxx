@@ -18,28 +18,28 @@
 std::string
 lowercase_string (std::string text){
 	std::transform(text.begin(), text.end(), text.begin(),
-        [](unsigned char c){ return std::tolower(c); }
-    );
+		[](unsigned char c){ return std::tolower(c); }
+	);
 	return text;
 }
 
 std::string randomize_lineage(){
-    std::string lineage = "";
-    const std::vector<std::string> options = {
-        "Human",
-        "Elf",
-        "Dwarf",
-        "Orc",
-        "Halfling",
-        "Tiefling",
-        "Gnome"
-    };
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<std::size_t> dist(0, options.size() - 1);
-    lineage = options[dist(gen)];
+	std::string lineage = "";
+	const std::vector<std::string> options = {
+		"Human",
+		"Elf",
+		"Dwarf",
+		"Orc",
+		"Halfling",
+		"Tiefling",
+		"Gnome"
+	};
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<std::size_t> dist(0, options.size() - 1);
+	lineage = options[dist(gen)];
 	debug("Lineage: " << lineage << '\n');
-    return lineage;
+	return lineage;
 }
 
 int
@@ -54,50 +54,50 @@ find_operation(std::string line){
 std::map<std::string, int>
 create_item_map(std::string changes){
 	std::stringstream i(changes);
-    std::string current_item;
+	std::string current_item;
 	std::map<std::string, int> item_map;
-    while(std::getline(i, current_item, ',')){
+	while(std::getline(i, current_item, ',')){
 		int operation = find_operation(current_item);
 		int item_pos = current_item.find(' ', operation) + 1;
 		int amount = std::stoi(current_item.substr(operation, item_pos - 1 - operation));
-        std::string item = current_item.substr(item_pos);
+		std::string item = current_item.substr(item_pos);
 		item = lowercase_string(item);
 		item_map[item] = amount;
-    }
+	}
 	return item_map;
 }
 
 std::map<std::string, int>
 create_stat_map(std::string changes){
 	std::stringstream s(changes);
-    std::string current_change;
+	std::string current_change;
 	std::map<std::string, int> statchange_map;
-    while(std::getline(s, current_change, ',')){
-        int operation = find_operation(current_change);
+	while(std::getline(s, current_change, ',')){
+		int operation = find_operation(current_change);
 		size_t line_start = current_change.find_first_not_of(" (");
-        std::string affected_stat = current_change.substr(line_start, operation - 2);
+		std::string affected_stat = current_change.substr(line_start, operation - 2);
 		affected_stat = lowercase_string(affected_stat);
-        int change = std::stoi(current_change.substr(operation));
-        statchange_map[affected_stat] = change;
-    }
+		int change = std::stoi(current_change.substr(operation));
+		statchange_map[affected_stat] = change;
+	}
 	return statchange_map;
 }
 
 std::array<std::map<std::string, int>, 2>
 initialize_stat_inv_changes(std::string changes){
 	std::array<std::map<std::string, int>, 2> maps;
-    int open_square = changes.find('[');
+	int open_square = changes.find('[');
 
-    if (changes[0] != '['){
-        if (open_square == std::string::npos) {
-            maps[0] = create_stat_map(changes);
-        } else {
-            std::string stat_changes = changes.substr(0, open_square - 1);
-            std::string item_changes = changes.substr(open_square);
-            maps[0] = create_stat_map(stat_changes);
-            maps[1] = create_item_map(item_changes);
-        }
-    }else{
+	if (changes[0] != '['){
+		if (open_square == std::string::npos) {
+			maps[0] = create_stat_map(changes);
+		} else {
+			std::string stat_changes = changes.substr(0, open_square - 1);
+			std::string item_changes = changes.substr(open_square);
+			maps[0] = create_stat_map(stat_changes);
+			maps[1] = create_item_map(item_changes);
+		}
+	}else{
 		maps[1] = create_item_map(changes);
 	}
 	return maps;
@@ -106,15 +106,15 @@ initialize_stat_inv_changes(std::string changes){
 void
 attach_change_maps(auto maps, std::string id, auto &story_map){
 	if (id.substr(0,3) == "opt"){
-        int open_paren = id.find('(');
-        int close_paren = id.find(')');
-        std::string source = id.substr(open_paren + 1, close_paren - open_paren - 1);
-        int opt_num = std::stoi(id.substr(close_paren + 1));
-        story_map[source].options[opt_num - 1].stat_change_map = maps[0];
-        story_map[source].options[opt_num - 1].item_change_map = maps[1];
-    }else{
-        story_map[id].stat_change_map = maps[0];
-        story_map[id].item_change_map = maps[1];
+		int open_paren = id.find('(');
+		int close_paren = id.find(')');
+		std::string source = id.substr(open_paren + 1, close_paren - open_paren - 1);
+		int opt_num = std::stoi(id.substr(close_paren + 1));
+		story_map[source].options[opt_num - 1].stat_change_map = maps[0];
+		story_map[source].options[opt_num - 1].item_change_map = maps[1];
+	}else{
+		story_map[id].stat_change_map = maps[0];
+		story_map[id].item_change_map = maps[1];
 	}
 }
 
@@ -125,7 +125,7 @@ parse_option(auto &story_map, std::string line){
 	std::string parent_paragraph = line.substr(1,colon - 1);
 	std::string destination = line.substr(colon + 1,close_bracket - colon - 1);
 	std::string prompt;
-    std::string stat_inv_changes;
+	std::string stat_inv_changes;
 
 	switch (line[close_bracket + 1]){
 	case ' ':{
@@ -135,32 +135,32 @@ parse_option(auto &story_map, std::string line){
 	case '(':{
 		int open_paren = line.find('(');
 		int close_paren = line.find(')');
-        if (line[close_paren + 1] != '['){
-            prompt = line.substr(close_paren + 1);
-            stat_inv_changes = line.substr(open_paren, close_paren - open_paren);
-        }else{
-            int close_square = line.find(']');
-            prompt = line.substr(close_square + 1);
-            stat_inv_changes = line.substr(open_paren, close_square - open_paren);
-        }
+		if (line[close_paren + 1] != '['){
+			prompt = line.substr(close_paren + 1);
+			stat_inv_changes = line.substr(open_paren, close_paren - open_paren);
+		}else{
+			int close_square = line.find(']');
+			prompt = line.substr(close_square + 1);
+			stat_inv_changes = line.substr(open_paren, close_square - open_paren);
+		}
 	}
 	break;
 	case '[':{
 		int open_square = line.find('[');
 		int close_square = line.find(']');
-        prompt = line.substr(close_square + 1);
-        stat_inv_changes = line.substr(open_square, close_square - open_square);
+		prompt = line.substr(close_square + 1);
+		stat_inv_changes = line.substr(open_square, close_square - open_square);
 	}
 	}
 
 	destination = lowercase_string(destination);
 	parent_paragraph = lowercase_string(parent_paragraph);
-    story_map[parent_paragraph].options.push_back(option(prompt, destination));
+	story_map[parent_paragraph].options.push_back(option(prompt, destination));
 
 	if (!stat_inv_changes.empty()){
 		int p = story_map[parent_paragraph].options.size();
-    	std::string option_id = "option(" + parent_paragraph + ")" + std::to_string(p);
-        auto maps = initialize_stat_inv_changes(stat_inv_changes);
+		std::string option_id = "option(" + parent_paragraph + ")" + std::to_string(p);
+		auto maps = initialize_stat_inv_changes(stat_inv_changes);
 		attach_change_maps(maps, option_id, story_map);
 	}
 }
@@ -283,7 +283,7 @@ load_items(const std::string &itemCatalog){
 		}
 		if (line[0] == ' '){
 			std::cerr << "Item ID has preceding spaces: "
-            << std::strerror(errno);
+			<< std::strerror(errno);
 		}
 
 		std::string item_data = line;
@@ -301,8 +301,8 @@ std::string
 open_file(std::string path){
 	std::ifstream file(path);
 	if (!file) {
-    	std::cerr << "Error opening file: "
-            << std::strerror(errno);
+		std::cerr << "Error opening file: "
+			<< std::strerror(errno);
 	}
 	std::stringstream read_file;
 	read_file << file.rdbuf();
@@ -321,7 +321,7 @@ game_data
 load_game(){
 	files files = open_files();
 	character player;
-    player.lineage = randomize_lineage();
+	player.lineage = randomize_lineage();
 	auto story = parse_story(files.story);
 	auto items = load_items(files.items);
 	game_data data(story, "start", items, player);

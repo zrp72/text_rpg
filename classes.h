@@ -15,19 +15,19 @@ class item_instance {
 };
 
 class character {
-    public:
+	public:
 	std::map<std::string, int> attributes = {
 		{"Reputation", 0},
 		{"Strenth", 0},
 		{"Agility", 0}
 	};
-    std::string lineage;
+	std::string lineage;
 	std::vector<item_instance> inventory;
 	int inventory_size = 30;
 	std::map<std::string, std::vector<item_instance>> stashed_items;
 	std::map<std::string, bool> decisions;
 
-    character():attributes(){};
+	character():attributes(){};
 };
 
 class option {
@@ -35,7 +35,7 @@ class option {
 	std::string prompt;
 	std::string dest_label;
 	std::map<std::string, int> stat_change_map;
-    std::map<std::string, int> item_change_map;
+	std::map<std::string, int> item_change_map;
 
 	option(std::string p, std::string dest) : prompt(p), dest_label(dest){}
 };
@@ -44,7 +44,7 @@ class paragraph{
 	public:
 	std::string text;
 	std::map<std::string, int> stat_change_map;
-    std::map<std::string, int> item_change_map;
+	std::map<std::string, int> item_change_map;
 	std::vector<option> options;
 	//for nexuses
 	bool nexus = false;
@@ -107,7 +107,7 @@ class gui_core {
 			throw std::runtime_error(SDL_GetError());
 		}
 
-		window = SDL_CreateWindow("Test", 800, 600, SDL_WINDOW_RESIZABLE);
+		window = SDL_CreateWindow("TextRPG", 800, 600, SDL_WINDOW_RESIZABLE);
 		if(!window){
 			throw std::runtime_error(SDL_GetError());
 		}
@@ -135,17 +135,17 @@ class gui_core {
 class assets;
 
 class relative_rect {
-    public:
-    SDL_Rect SDL_rect;
+	public:
+	SDL_Rect SDL_rect;
 	//relative values are 0-1
 	//ex: 0.3
-    float relative_x = 0;
-    float relative_y = 0;
-    float relative_w = 1;
-    float relative_h = 1;
+	float relative_x = 0;
+	float relative_y = 0;
+	float relative_w = 1;
+	float relative_h = 1;
 
-    relative_rect(){};
-    relative_rect(float x, float y, float w, float h) : relative_x(x), relative_y(y), relative_w(w), relative_h(h){}
+	relative_rect(){}
+	relative_rect(float x, float y, float w, float h) : relative_x(x), relative_y(y), relative_w(w), relative_h(h){}
 };
 
 class relative_text {
@@ -175,7 +175,7 @@ class relative_texture {
 	std::string texture_ID;
 	SDL_Rect srcrect;
 	relative_rect dstrect;
-	std::function<void(game_data&, assets&, gui_core&)> click_events;
+	std::function<void(game_data&, assets&, gui_core&)> click_events = nullptr;
 
 	relative_texture(){};
 	relative_texture(std::string t, SDL_Rect s, relative_rect d, std::function<void(game_data&, assets&, gui_core&)> c)
@@ -183,15 +183,15 @@ class relative_texture {
 };
 
 class UI_element {
-    public:
-    std::vector<relative_texture> texture;
+	public:
+	std::vector<relative_texture> texture;
 	std::vector<relative_text> text;
 	relative_rect mask;
 	relative_rect area;
 	int scroll_y = 0;
-    bool visible = false;
+	bool visible = false;
 
-    UI_element(){}
+	UI_element(){}
 
 	void determine_area(){
 		float min_x = 1;
