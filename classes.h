@@ -163,7 +163,7 @@ class relative_text {
 	float x;
 	float y;
 	float wrap_width;
-	int scroll_y;
+	int scroll_y = 0;
 
 	relative_text(){};
 	relative_text(std::string t, std::string f, SDL_Color c, relative_rect m, float x, float y, float w)
