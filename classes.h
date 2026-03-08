@@ -137,11 +137,13 @@ class assets;
 class relative_rect {
 	public:
 	SDL_Rect SDL_rect;
-	//relative values are 0-1
-	//ex: 0.3
+	//x position relative to screen size, from left to right, 0... 1.
 	float relative_x = 0;
+	//y position relative to screen size, from top to bottom, 0... 1.
 	float relative_y = 0;
+	//width relative to screen size, 0... 1.
 	float relative_w = 1;
+	//height relative to screen size, 0... 1.
 	float relative_h = 1;
 
 	relative_rect(){}
@@ -150,14 +152,17 @@ class relative_rect {
 
 class relative_text {
 	public:
+	TTF_Text* TTF_text = nullptr;
 	std::string text;
 	std::string font_ID;
 	SDL_Color color;
 	relative_rect mask;
+	//x position relative to screen size, from left to right, 0... 1.
 	float relative_x;
+	//y position relative to screen size, from top to bottom, 0... 1.
 	float relative_y;
+	//wrap width relative to screen size, 0... 1.
 	float relative_wrap_width;
-	//following values are automatically set
 	float width;
 	float height;
 	float x;
@@ -223,16 +228,22 @@ class assets {
 	std::map<std::string, TTF_Font*> fonts;
 	std::map<std::string, SDL_Texture*> textures;
 	std::map<std::string, UI_element> elements;
+	std::vector<TTF_Text*> created_texts;
 
 	assets(gui_core& gui){
 		std::filesystem::path original_path(std::filesystem::current_path());
 
+		auto load_font = [&](std::string font_name, const char* font_path){
+			fonts[font_name] = TTF_OpenFont(font_path, 24);
+			if(!fonts[font_name]){
+				std::cerr << "Failed to load font: " << SDL_GetError() << '\n';
+			}
+			TTF_SetFontWrapAlignment(fonts[font_name], TTF_HORIZONTAL_ALIGN_CENTER);
+		};
+
 		std::filesystem::current_path("ttf files");
-		fonts["roboto_light"] = TTF_OpenFont("Roboto-Light.ttf", 24);
-		if (!fonts["roboto_light"]) {
-			std::cerr << "Failed to load font: " << SDL_GetError() << '\n';
-		}
-		TTF_SetFontWrapAlignment(fonts["roboto_light"], TTF_HORIZONTAL_ALIGN_CENTER);
+
+		load_font("roboto_light", "Roboto-Light.ttf");
 
 		std::filesystem::current_path(original_path / "assets");
 		textures["option_border"] = IMG_LoadTexture(gui.renderer, "option_border.png");
@@ -245,6 +256,9 @@ class assets {
 	}
 
 	~assets(){
+		for(auto& t : created_texts){
+			TTF_DestroyText(t);
+		}
 		for(auto& [tag, f] : fonts){
 			TTF_CloseFont(f);
 		}
@@ -253,8 +267,14 @@ class assets {
 		}
 	}
 
-	void add_element(std::string tag, UI_element& e){
+	void add_element(std::string tag, UI_element& e, gui_core& gui){
 		e.determine_area();
+		for(auto& t : e.text){
+			TTF_Text* text = TTF_CreateText(gui.text_engine, fonts[t.font_ID], t.text.data(), 0);
+			TTF_SetTextColor(text, t.color.r, t.color.g, t.color.b, t.color.a);
+			created_texts.push_back(text);
+			t.TTF_text = text;
+		}
 		elements.insert_or_assign(tag, e);
 	}
 

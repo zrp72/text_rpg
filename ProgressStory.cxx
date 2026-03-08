@@ -167,6 +167,7 @@ update_UI(game_data& data, assets& assets, gui_core& gui){
 	debug(p.text.data() << '\n');
 
 	s.text[0].text = p.text;
+	TTF_SetTextString(s.text[0].TTF_text, p.text.data(), 0);
 	resize_element(s, gui.window, assets);
 	s.text[0].scroll_y = 0;
 

@@ -21,6 +21,7 @@ resize_text_elements(relative_text &t, SDL_Window* window, assets& assets){
 	SDL_GetWindowSizeInPixels(window, &window_width, &window_height);
 
 	t.wrap_width = window_width * t.relative_wrap_width;
+	TTF_SetTextWrapWidth(t.TTF_text, t.wrap_width);
 
 	int text_width;
 	int text_height;
@@ -66,11 +67,53 @@ resize_element(UI_element &obj, SDL_Window* window, assets& assets){
 	obj.scroll_y = std::clamp(obj.scroll_y, 0, max_scroll);
 }
 
+void
+render_debug_hitbox(gui_core& gui, SDL_Rect area, int r, int g, int b, int a){
+	SDL_SetRenderDrawColor(gui.renderer, r, g, b, a);
+	SDL_FRect frect1;
+	SDL_RectToFRect(&area, &frect1);
+	SDL_RenderRect(gui.renderer, &frect1);
+}
+
+void
+render_element(const UI_element& obj, gui_core& gui, assets& assets){
+	
+	render_debug_hitbox(gui, obj.area.SDL_rect, 255, 192, 203, 255);
+
+	SDL_SetRenderClipRect(gui.renderer, &obj.mask.SDL_rect);
+
+	for(auto &t : obj.texture){
+		SDL_FRect srcrect;
+		SDL_FRect dstrect;
+		SDL_RectToFRect(&t.srcrect, &srcrect);
+		SDL_RectToFRect(&t.dstrect.SDL_rect, &dstrect);
+		dstrect.y -= obj.scroll_y;
+
+		SDL_Texture* texture = assets.textures[t.texture_ID];
+		SDL_RenderTexture(gui.renderer, texture, &srcrect, &dstrect);
+	}
+
+	for(auto &t : obj.text){
+
+		SDL_Rect original_mask = t.mask.SDL_rect;
+		original_mask.y -= obj.scroll_y;
+
+		SDL_Rect mask;
+		if(SDL_GetRectIntersection(&original_mask, &obj.mask.SDL_rect, &mask)){
+			SDL_SetRenderClipRect(gui.renderer, &mask);
+
+			render_debug_hitbox(gui, mask, 255, 255, 255, 255);
+
+			TTF_DrawRendererText(t.TTF_text, t.x, t.y - t.scroll_y - obj.scroll_y);
+		}
+	}
+	SDL_SetRenderClipRect(gui.renderer, NULL);
+}
+
 int
 launch_game(game_data &data, assets& assets, gui_core& gui){
 
 	bool running = true;
-	TTF_Text* TTF_Text= TTF_CreateText(gui.text_engine, assets.fonts["roboto_light"], "a", 0);
 	float mouse_x;
 	float mouse_y;
 	SDL_Point mouse_pos;
@@ -117,6 +160,7 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
 					}
 
 					if(scrolled){break;}else{
+
 						if(SDL_PointInRect(&mouse_pos, &obj.area.SDL_rect)){
 							int max_scroll = obj.area.SDL_rect.h - obj.mask.SDL_rect.h;
 							obj.scroll_y -= event.wheel.y * 25;
@@ -132,6 +176,7 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
 
 				for(auto& [tag, obj] : assets.elements){
 					for(auto& t : obj.texture){
+
 						SDL_Rect visible_dstrect(t.dstrect.SDL_rect);
 						visible_dstrect.y -= obj.scroll_y;
 
@@ -153,56 +198,12 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
 
 		for (const auto &[tag, obj] : assets.elements){
 			if(obj.visible){
-				SDL_SetRenderDrawColor(gui.renderer, 255, 192, 203, 255);
-				SDL_FRect frect1;
-				SDL_RectToFRect(&obj.area.SDL_rect, &frect1);
-				SDL_RenderRect(gui.renderer, &frect1);
-
-				SDL_SetRenderClipRect(gui.renderer, &obj.mask.SDL_rect);
-				for(auto &t : obj.texture){
-					SDL_FRect srcrect;
-					SDL_FRect dstrect;
-					SDL_RectToFRect(&t.srcrect, &srcrect);
-					SDL_RectToFRect(&t.dstrect.SDL_rect, &dstrect);
-					dstrect.y -= obj.scroll_y;
-
-					SDL_Texture* texture = assets.textures[t.texture_ID];
-
-					SDL_RenderTexture(gui.renderer, texture, &srcrect, &dstrect);
-				}
-
-				for(auto &t : obj.text){
-					SDL_Rect original_mask = t.mask.SDL_rect;
-					original_mask.y -= obj.scroll_y;
-
-					SDL_Rect mask;
-					if(SDL_GetRectIntersection(&original_mask, &obj.mask.SDL_rect, &mask)){
-						SDL_SetRenderClipRect(gui.renderer, &mask);
-
-						TTF_SetTextString(TTF_Text, t.text.data(), 0);
-						TTF_SetTextFont(TTF_Text, assets.fonts[t.font_ID]);
-						TTF_SetTextColor(TTF_Text, t.color.r, t.color.g, t.color.b, t.color.a);
-						TTF_SetTextWrapWidth(TTF_Text, t.wrap_width);
-
-
-
-						SDL_SetRenderDrawColor(gui.renderer, 255, 255, 255, 255);
-						SDL_FRect frect;
-						SDL_RectToFRect(&mask, &frect);
-						SDL_RenderRect(gui.renderer, &frect);
-
-						
-
-						TTF_DrawRendererText(TTF_Text, t.x, t.y - t.scroll_y - obj.scroll_y);
-					}
-				}
-				SDL_SetRenderClipRect(gui.renderer, NULL);
+				render_element(obj, gui, assets);
 			}
 		}
 
 		SDL_RenderPresent(gui.renderer);
 	}
-	TTF_DestroyText(TTF_Text);
 
 	return 0;
 }
