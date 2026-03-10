@@ -10,6 +10,28 @@
 #include <functional>
 #include <filesystem>
 
+class glyph {
+	public:
+	std::string atlas_tag;
+	SDL_FRect atlas_position;
+
+	uint32_t unicode;
+	std::string font = "roboto_light";
+	SDL_Color color = {255, 255, 255, 255};
+	bool bold;
+	bool italic;
+	int size;
+
+	int min_x;
+	int max_x;
+	int min_y;
+	int max_y;
+	int advance;
+
+	glyph(){}
+	glyph(uint32_t u) : unicode(u){}
+};
+
 class item_instance {
 	public:
 	std::string item_ID;
@@ -87,6 +109,7 @@ class game_data {
 	public:
 	std::map<std::string, paragraph> story;
 	std::string story_location;
+	std::vector<glyph> used_glyphs;
 	std::map<std::string, item> items;
 	character player;
 
@@ -175,6 +198,11 @@ class relative_text {
 	relative_text(){};
 	relative_text(std::string t, std::string f, SDL_Color c, relative_rect m, float x, float y, float w)
 	: text(t), font_ID(f), color(c), mask(m), relative_x(x), relative_y(y), relative_wrap_width(w){};
+
+	void update_text(std::string new_text){
+		text = new_text;
+		TTF_SetTextString(TTF_text, new_text.data(), 0);
+	}
 };
 
 class relative_texture {
@@ -205,10 +233,12 @@ class UI_element {
 
 class assets {
 	public:
-	std::map<std::string, TTF_Font*> fonts;
+	//stores every created SDL_Texture, including glyph atlases
 	std::map<std::string, SDL_Texture*> textures;
-	std::map<std::string, UI_element> elements;
+	std::map<std::string, TTF_Font*> fonts;
+	std::map<uint32_t, glyph> glyphs;
 	std::vector<TTF_Text*> created_texts;
+	std::map<std::string, UI_element> elements;
 
 	assets(gui_core&);
 
@@ -224,23 +254,11 @@ class assets {
 		}
 	}
 
-	void add_element(std::string tag, UI_element& e, gui_core& gui){
-		e.determine_area();
-		for(auto& t : e.text){
-			TTF_Text* text = TTF_CreateText(gui.text_engine, fonts[t.font_ID], t.text.data(), 0);
-			TTF_SetTextColor(text, t.color.r, t.color.g, t.color.b, t.color.a);
-			created_texts.push_back(text);
-			t.TTF_text = text;
-		}
-		elements.insert_or_assign(tag, e);
-	}
+	void rasterize_glyph_atlas(std::vector<glyph>&, gui_core&);
 
-	SDL_Rect get_texture_srcrect(std::string tag){
-		float width, height;
-		SDL_GetTextureSize(textures[tag], &width, &height);
-		SDL_Rect srcrect(0, 0, width, height);
-		return srcrect;
-	}
+	void add_element(std::string, UI_element&, gui_core&);
+
+	SDL_Rect get_texture_srcrect(std::string);
 };
 
 #endif

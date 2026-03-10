@@ -25,6 +25,7 @@ int main(int argc, char** argv) {
 		gui_core gui;
 
 		assets assets(gui);
+		assets.rasterize_glyph_atlas(loaded_data.used_glyphs, gui);
 
 		if(create_UI_elements(gui, assets, loaded_data)){
 			debug("Failed to create UI elements");

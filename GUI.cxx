@@ -113,6 +113,13 @@ render_element(const UI_element& obj, gui_core& gui, assets& assets){
 int
 launch_game(game_data &data, assets& assets, gui_core& gui){
 
+	uint32_t a_glyph = U'a';
+	debug(TTF_FontHasGlyph(assets.fonts["roboto_light"], a_glyph)<<'\n');
+
+	std::vector<glyph> test_glyphs;
+	test_glyphs.push_back(glyph(U'u'));
+	assets.rasterize_glyph_atlas(test_glyphs, gui);
+
 	bool running = true;
 	float mouse_x;
 	float mouse_y;
@@ -201,6 +208,8 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
 				render_element(obj, gui, assets);
 			}
 		}
+
+		SDL_RenderTexture(gui.renderer, assets.textures["glyph_atlas1"], NULL, NULL);
 
 		SDL_RenderPresent(gui.renderer);
 	}

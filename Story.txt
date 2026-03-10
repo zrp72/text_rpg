@@ -12,20 +12,8 @@
 
 
 
-Start: The world before you sits illuminated under a glowing sun. TTTTTTTTTTTTTTTEEEEEEEEEEEEEEEE
-EEEEEESSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTEEEEEEEEEEEEEEEEEEEEEESSSSSSSSSSSSSSS
-SSSSSTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTEEEEEEEEEEEEEEEEEEEEEESSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTT
-TTTTTTTTTTTTTTTTTTEEEEEEEEEEEEEEEEEEEEEESSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTEEE
-EEEEEEEEEEEEEEEEEEESSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTTT
+Start: The world before you sits illuminated under a glowing sun.
 
-{Start:Town}(Rep -15) Turn left
-{Start:Wilderness} Turn right
-{Start:Town}(Rep -15) Test?
-{Start:Wilderness} Turn right
-{Start:Town}(Rep -15) Turn left
-{Start:Wilderness} Turn right
-{Start:Town}(Rep -15) Turn left
-{Start:Wilderness} Turn right
 {Start:Town}(Rep -15) Turn left
 {Start:Wilderness} Turn right
 
@@ -37,7 +25,7 @@ Hero = Rep:10
 Exhausted = Rep:5, Weariness:15
 Testing = Visits:5
 
-Villain:[ +1 Obliterator, +1 Healing Potion] The guards raise their swords as you approach.
+Villain:[+1 Obliterator, +1 Healing Potion] |[bold]|The guards raise their swords as you approach.
 Who goes there?
 
 {Villain:Town} Loop back
