@@ -15,13 +15,14 @@
 
 #define debug(x)  std::cout << x
 
-std::string
-lowercase_string (std::string text){
+void
+lowercase_string (std::string& text){
 	std::transform(text.begin(), text.end(), text.begin(),
 		[](unsigned char c){ return std::tolower(c); }
 	);
-	return text;
 }
+
+/*
 
 std::string randomize_lineage(){
 	std::string lineage = "";
@@ -61,7 +62,7 @@ create_item_map(std::string changes){
 		int item_pos = current_item.find(' ', operation) + 1;
 		int amount = std::stoi(current_item.substr(operation, item_pos - 1 - operation));
 		std::string item = current_item.substr(item_pos);
-		item = lowercase_string(item);
+		lowercase_string(item);
 		item_map[item] = amount;
 	}
 	return item_map;
@@ -76,7 +77,7 @@ create_stat_map(std::string changes){
 		int operation = find_operation(current_change);
 		size_t line_start = current_change.find_first_not_of(" (");
 		std::string affected_stat = current_change.substr(line_start, operation - 2);
-		affected_stat = lowercase_string(affected_stat);
+		lowercase_string(affected_stat);
 		int change = std::stoi(current_change.substr(operation));
 		statchange_map[affected_stat] = change;
 	}
@@ -133,8 +134,8 @@ parse_option(auto &story_map, std::string line){
 	}
 	break;
 	case '(':{
-		int open_paren = line.find('(');
-		int close_paren = line.find(')');
+		int open_paren = line.find('(', close_bracket);
+		int close_paren = line.find(')', open_paren);
 		if (line[close_paren + 1] != '['){
 			prompt = line.substr(close_paren + 1);
 			stat_inv_changes = line.substr(open_paren, close_paren - open_paren);
@@ -196,7 +197,7 @@ void parse_paragraph(std::stringstream &story, std::string line, std::map<std::s
 	while (std::getline(story, line) && !line.empty()) {
 		text += '\n' + line;
 	}
-	tag = lowercase_string(tag);
+	lowercase_string(tag);
 	story_map[tag] = paragraph(text);
 	if (!stat_inv_changes.empty()) {
 		auto maps = initialize_stat_inv_changes(stat_inv_changes);
@@ -215,8 +216,8 @@ void parse_nexus(std::stringstream &story, std::string line, std::map<std::strin
 		text += line + '\n';
 	}
 
-	tag = lowercase_string(tag);
-	text = lowercase_string(text);
+	lowercase_string(tag);
+	lowercase_string(text);
 	story_map[tag] = paragraph(text, nexus);
 }
 
@@ -237,12 +238,11 @@ parse_story(const std::string &writtenStory) {
 		case '{': {
 			parse_option(story_map, line);
 		} break;
+		case '[': {
+			parse_nexus(story, line, story_map);
+		} break;
 		default: {
-			if (line[0] != '[') {
-				parse_paragraph(story, line, story_map);
-			} else {
-				parse_nexus(story, line, story_map);
-			}
+			parse_paragraph(story, line, story_map);
 		} break;
 		}
 	}
@@ -277,7 +277,7 @@ load_items(const std::string &itemCatalog){
 	std::string line;
 	std::map<std::string, item> items;
 	while(std::getline(i, line)){
-		line = lowercase_string(line);
+		lowercase_string(line);
 		if (line.length() == 0 || line.substr(0,2) == "//" || line[0] == '_'){
 			continue;
 		}
@@ -324,7 +324,6 @@ load_game(){
 	player.lineage = randomize_lineage();
 	auto story = parse_story(files.story);
 	auto items = load_items(files.items);
-	game_data data(story, "start", items, player);
 
-	return data;
-}
+	return game_data(story, "start", items, player);
+}*/

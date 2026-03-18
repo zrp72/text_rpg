@@ -5,6 +5,8 @@
 assets::assets(gui_core& gui){
 
 	std::filesystem::path original_path(std::filesystem::current_path());
+	std::filesystem::current_path("ttf files");
+
 
 	auto load_font = [&](std::string font_name, const char* font_path){
 		TTF_Font* font = TTF_OpenFont(font_path, 24);
@@ -12,10 +14,8 @@ assets::assets(gui_core& gui){
 			std::cerr << "Failed to load font: " << SDL_GetError() << '\n';
 		}
 		TTF_SetFontWrapAlignment(font, TTF_HORIZONTAL_ALIGN_CENTER);
-		fonts[font_name] = font;
+		this->fonts[font_name] = font;
 	};
-
-	std::filesystem::current_path("ttf files");
 
 	load_font("roboto_light", "Roboto-Light.ttf");
 	load_font("roboto_light(bold)", "Roboto-Bold.ttf");
@@ -25,11 +25,16 @@ assets::assets(gui_core& gui){
 
 	std::filesystem::current_path(original_path / "assets");
 
-	textures["option_border"] = IMG_LoadTexture(gui.renderer, "option_border.png");
-	if (!textures["option_border"]) {
-		std::cerr << "Failed to load texture: " << SDL_GetError() << '\n';
-	}
-	SDL_SetTextureBlendMode(textures["option_border"], SDL_BLENDMODE_BLEND);
+	auto load_texture = [&](std::string texture_name, const char* path){
+		SDL_Texture* texture = IMG_LoadTexture(gui.renderer, path);
+		if(!texture){
+			std::cerr << "Failed to load texture: " << SDL_GetError() << '\n';
+		}
+		SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+		this->textures[texture_name] = texture;
+	};
+
+	load_texture("option_border", "option_border.png");
 
 	std::filesystem::current_path(original_path);
 }
@@ -54,12 +59,14 @@ assets::rasterize_glyph_atlas(std::vector<glyph>& passed_glyphs, gui_core& gui){
 			debug(font << "does not contain glyph" << g.unicode << '\n');
 		}else{
 
-			TTF_GetGlyphMetrics(font, g.unicode, 
-				&g.min_x, 
-				&g.max_x, 
-				&g.min_y, 
-				&g.max_y, 
-				&g.advance);
+			rasterized_glyph_info rg;
+
+			TTF_GetGlyphMetrics(font, g.unicode,
+				&rg.min_x,
+				&rg.max_x,
+				&rg.min_y,
+				&rg.max_y,
+				&rg.advance);
 
 			SDL_Surface* s = TTF_RenderGlyph_Blended(font, g.unicode, g.color);
 
@@ -78,10 +85,9 @@ assets::rasterize_glyph_atlas(std::vector<glyph>& passed_glyphs, gui_core& gui){
 			}
 
 			SDL_BlitSurface(s, NULL, atlas, &dst);
-			g.atlas_tag = atlas_tag;
-			g.atlas_position = SDL_FRect(dst.x, dst.y, s->w, s->h);
-			glyphs[g.unicode] = g;
-			dst.x += s->w;	
+			glyphs[g] = {atlas_tag, SDL_FRect(dst.x, dst.y, s->w, s->h)};
+			dst.x += s->w;
+			SDL_DestroySurface(s);
 		}
 	}
 
@@ -92,12 +98,6 @@ assets::rasterize_glyph_atlas(std::vector<glyph>& passed_glyphs, gui_core& gui){
 void
 assets::add_element(std::string tag, UI_element& e, gui_core& gui){
 	e.determine_area();
-	for(auto& t : e.text){
-		TTF_Text* text = TTF_CreateText(gui.text_engine, fonts[t.font_ID], t.text.data(), 0);
-		TTF_SetTextColor(text, t.color.r, t.color.g, t.color.b, t.color.a);
-		created_texts.push_back(text);
-		t.TTF_text = text;
-	}
 	elements.insert_or_assign(tag, e);
 }
 

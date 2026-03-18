@@ -15,52 +15,109 @@ TTF_GetStringSize
 #define debug(x)  std::cout << x
 
 void
-resize_text_elements(relative_text &t, SDL_Window* window, assets& assets){
-	int window_width;
-	int window_height;
-	SDL_GetWindowSizeInPixels(window, &window_width, &window_height);
+relative_text::resize(gui_core& gui, assets& assets){
+	gui_core::window_size ws;
+	SDL_GetWindowSizeInPixels(gui.window, &ws.width, &ws.height);
 
-	t.wrap_width = window_width * t.relative_wrap_width;
-	TTF_SetTextWrapWidth(t.TTF_text, t.wrap_width);
+	this->dstrect.SDL_rect.x = ws.width * this->dstrect.relative_x;
+	this->dstrect.SDL_rect.y = ws.height * this->dstrect.relative_y;
+	this->dstrect.SDL_rect.w = ws.width * this->dstrect.relative_w;
 
-	int text_width;
-	int text_height;
-	TTF_GetStringSizeWrapped(assets.fonts[t.font_ID], t.text.data(), 0, t.wrap_width, &text_width, &text_height);
-	t.width = text_width;
-	t.height = text_height;
+	class word {
+		public:
+		std::vector<glyph> characters;
+		int length = 0;
 
-	t.x = window_width * t.relative_x;
-	t.y = window_height * t.relative_y;
+		word(){}
+	};
 
-	int max_scroll = t.height - t.mask.SDL_rect.h;
+	class line {
+		public:
+		std::vector<word> text;
+		int length = 0;
+
+		line(){}
+	};
+
+	int highest;
+	int lowest;
+	std::vector<word> words;
+	word current_word;
+	for(auto& glyph : this->text){
+		if(glyph.unicode != U' '){
+			auto& glyph_data = assets.glyphs.at(glyph);
+			highest = std::max(highest, glyph_data.max_x);
+			lowest = std::min(lowest, glyph_data.min_x);
+			current_word.characters.push_back(glyph);
+			current_word.length += glyph_data.max_x;
+		}else{
+			words.push_back(current_word);
+			current_word = word();
+		}
+	}
+	if(!current_word.characters.empty()){
+		words.push_back(current_word);
+	}
+
+	int font_height = highest - lowest;
+
+	std::vector<line> lines;
+	line current_line;
+	for(auto& word : words){
+		if(current_line.length + word.length > dstrect.SDL_rect.w){
+			lines.push_back(current_line);
+			current_line = line();
+		}else{
+			current_line.text.push_back(word);
+			current_line.length += word.length;
+		}
+	}
+	if(!current_line.text.empty()){
+		lines.push_back(current_line);
+	}
+
+	int height = lines.size() * font_height;
+	SDL_Surface* text_texture = SDL_CreateSurface(this->dstrect.SDL_rect.w, height,
+		SDL_PIXELFORMAT_ARGB8888);
+
+	int pen_x = 0;
+	int pen_y = 0;
+	for(line& line : lines){
+		for(word& word : line.text){
+			for(glyph& glyph : word.characters){
+
+			}
+		}
+	}
+
+	int max_scroll = this->dstrect.SDL_rect.h - this->mask.SDL_rect.h;
 	max_scroll = std::max(0, max_scroll);
-	t.scroll_y = std::clamp(t.scroll_y, 0, max_scroll);
+	this->scroll_y = std::clamp(this->scroll_y, 0, max_scroll);
 }
 
 void
-resize_rects(relative_rect &rect, SDL_Window* window){
-	int window_width;
-	int window_height;
-	SDL_GetWindowSizeInPixels(window, &window_width, &window_height);
+resize_rect(relative_rect &rect, SDL_Window* window){
+	gui_core::window_size ws;
+	SDL_GetWindowSizeInPixels(window, &ws.width, &ws.height);
 
-	rect.SDL_rect.x = window_width * rect.relative_x;
-	rect.SDL_rect.y = window_height * rect.relative_y;
+	rect.SDL_rect.x = ws.width * rect.relative_x;
+	rect.SDL_rect.y = ws.height * rect.relative_y;
 
-	rect.SDL_rect.w = window_width * rect.relative_w;
-	rect.SDL_rect.h = window_height * rect.relative_h;
+	rect.SDL_rect.w = ws.width * rect.relative_w;
+	rect.SDL_rect.h = ws.height * rect.relative_h;
 }
 
 void
-resize_element(UI_element &obj, SDL_Window* window, assets& assets){
-    resize_rects(obj.area, window);
-    resize_rects(obj.mask, window);
-    for (auto &texture : obj.texture) {
-        resize_rects(texture.dstrect, window);
-    }
-    for (auto &text : obj.text) {
-        resize_rects(text.mask, window);
-        resize_text_elements(text, window, assets);
-    }
+resize_element(UI_element &obj, gui_core& gui, assets& assets){
+	resize_rect(obj.area, gui.window);
+	resize_rect(obj.mask, gui.window);
+	for (auto &texture : obj.texture) {
+		resize_rect(texture.dstrect, gui.window);
+	}
+	for (auto &text : obj.text) {
+		resize_rect(text.mask, gui.window);
+		text.resize(gui, assets);
+	}
 
 	int max_scroll = obj.area.SDL_rect.h - obj.mask.SDL_rect.h;
 	max_scroll = std::max(0, max_scroll);
@@ -77,7 +134,7 @@ render_debug_hitbox(gui_core& gui, SDL_Rect area, int r, int g, int b, int a){
 
 void
 render_element(const UI_element& obj, gui_core& gui, assets& assets){
-	
+
 	render_debug_hitbox(gui, obj.area.SDL_rect, 255, 192, 203, 255);
 
 	SDL_SetRenderClipRect(gui.renderer, &obj.mask.SDL_rect);
@@ -95,30 +152,24 @@ render_element(const UI_element& obj, gui_core& gui, assets& assets){
 
 	for(auto &t : obj.text){
 
-		SDL_Rect original_mask = t.mask.SDL_rect;
-		original_mask.y -= obj.scroll_y;
+		SDL_Rect text_mask = t.mask.SDL_rect;
+		text_mask.y -= obj.scroll_y;
 
 		SDL_Rect mask;
-		if(SDL_GetRectIntersection(&original_mask, &obj.mask.SDL_rect, &mask)){
+		if(SDL_GetRectIntersection(&text_mask, &obj.mask.SDL_rect, &mask)){
 			SDL_SetRenderClipRect(gui.renderer, &mask);
 
 			render_debug_hitbox(gui, mask, 255, 255, 255, 255);
 
-			TTF_DrawRendererText(t.TTF_text, t.x, t.y - t.scroll_y - obj.scroll_y);
+			SDL_FRect dstrect;
+			SDL_RectToFRect(&t.dstrect.SDL_rect, &dstrect);
+			SDL_RenderTexture(gui.renderer, t.texture, NULL, &dstrect);
 		}
 	}
-	SDL_SetRenderClipRect(gui.renderer, NULL);
 }
 
 int
 launch_game(game_data &data, assets& assets, gui_core& gui){
-
-	uint32_t a_glyph = U'a';
-	debug(TTF_FontHasGlyph(assets.fonts["roboto_light"], a_glyph)<<'\n');
-
-	std::vector<glyph> test_glyphs;
-	test_glyphs.push_back(glyph(U'u'));
-	assets.rasterize_glyph_atlas(test_glyphs, gui);
 
 	bool running = true;
 	float mouse_x;
@@ -135,7 +186,7 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
 
 			if(event.type == SDL_EVENT_WINDOW_RESIZED){
 				for(auto &[tag, obj] : assets.elements){
-					resize_element(obj, gui.window, assets);
+					resize_element(obj, gui, assets);
 				}
 			}
 
@@ -157,7 +208,7 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
 					for(auto &text : obj.text){
 
 						if(SDL_PointInRect(&mouse_pos, &text.mask.SDL_rect)){
-							int max_scroll = text.height - text.mask.SDL_rect.h;
+							int max_scroll = text.dstrect.SDL_rect.h - text.mask.SDL_rect.h;
 							text.scroll_y -= event.wheel.y * 25;
 							clamp_scroll(max_scroll, text.scroll_y);
 

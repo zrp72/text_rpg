@@ -15,101 +15,78 @@
 
 #define debug(x)  std::cout << x
 
-bool
-does_stash_contain(std::string stash, std::string items, game_data &data){
-	bool viable = false;
-	if (items.find('('))
+std::pair<bool, story_variables>
+compare_variables_against_player(game_data& data, story_variables& variables){
+	story_variables remaining_variables;
+	auto& items = data.items;
+	auto& attributes = data.player.attributes;
+	auto& decisions = data.player.decisions;
+	auto& inv = data.player.inventory;
 
-	if (data.player.stashed_items.contains(stash)){
-		for (const auto &[item_ID, quantity] : data.player.stashed_items[stash]){
-			if (item_ID == items){
-				viable = true;
-				break;
-			}else{
-				viable = false;
-			}
-		}
-	}else{
-		viable = false;
-	}
-	return viable;
-}
-
-bool
-read_nexus_conditions(std::string conditions, game_data &data, paragraph &nexus){
-
-	std::stringstream conds(conditions);
-	std::string c;
 	bool viable = true;
-
-	while (viable && std::getline(conds, c, ',')){
-		int c_start = c.find_first_not_of(' ');
-		int comparator = c.find(':');
-		int c_end = c.find_last_not_of(' ');
-
-		std::string var = c.substr(c_start, comparator - c_start);
-
-		std::string check = c.substr(comparator + 1, c_end - comparator);
-
-		if (check == "true"){
-			if (data.player.decisions[var]){
-				viable = true;
-			}else{
+	for(auto& condition : variables.stats_and_items){
+		if(attributes.contains(condition.first)){
+			viable = attributes.at(condition.first) >= condition.second;
+			if(!viable){break;}
+		}else if(items.contains(condition.first)){
+			if(std::find(inv.begin(), inv.end(), items.at(condition.first)) == inv.end()){
 				viable = false;
 			}
-		}else if (check == "false"){
-			if (!data.player.decisions[var]){
-				viable = true;
-			}else{
-				viable = false;
-			}
-
-		}else if (check.find_first_not_of("1234567890") != std::string::npos){
-			viable = does_stash_contain(var, check, data);
-
 		}else{
-			int value = std::stoi(check);
-
-			if (var == "visits"){
-				viable = nexus.visits >= value;
-				continue;
-			}
-
-			viable = data.player.attributes[var] >= value;
+			remaining_variables.stats_and_items.push_back(condition);
 		}
 	}
-	return viable;
+	if(!viable){return {false, variables};}
+
+	for(auto& decision : variables.decisions){
+		if(!decisions.contains(decision)){
+			viable = false;
+			break;
+		}
+	}
+	return {viable, variables};
 }
 
-std::string
-get_destination(game_data &data, paragraph &par_nexus){
+std::pair<char, int>
+get_destination(game_data &data, nexus &nexus){
 
-	std::string destination;
-	std::string line;
-	std::stringstream text(par_nexus.text);
-	++par_nexus.visits;
+	std::vector<std::pair<char, int>> destination;
+	nexus.visits += 1;
+	int highest_exit_group;
 
-	while (getline(text, line) && !line.empty()){
-		line = lowercase_string(line);
-		int colon = line.find(':');
-		int line_start = line.find_first_not_of(' ');
-		int dest_tag_end = line.find_first_of(" =", line_start + 1);
-		std::string dest_ver = line.substr(line_start, dest_tag_end);
+	int exit_group_iteration = -1;
+	for(auto& exit_group : nexus.exits){
+		exit_group_iteration += 1;
 
-		if (colon == std::string::npos){
-			destination = dest_ver;
-		}else{
-			int conditions_start = line.find_first_not_of(" =", dest_tag_end);
-			std::string conditions = line.substr(conditions_start);
-
-			bool viable = read_nexus_conditions(conditions, data, par_nexus);
-
-			if (viable){
-				destination = dest_ver;
+		auto viable = compare_variables_against_player(data, exit_group.conditions);
+		if(!viable.first){continue;}
+		if(!viable.second.empty()){
+			for(auto& condition : viable.second.stats_and_items){
+				if(condition.first == "visits" || condition.first == "visit"){
+					viable.first = nexus.visits >= condition.second;
+					if(!viable.first){break;}
+				}else{
+					debug("Undefined remaining condition within nexus: " << condition.first << '\n');
+				}
 			}
 		}
+
+		if(viable.first){
+			highest_exit_group = exit_group_iteration;
+		}
 	}
-	return destination;
+	if(highest_exit_group == -1){
+		debug("No exit found for nexus.\n");
+	}
+	std::vector<std::string> exits;
+	for(auto& exit : nexus.exits[highest_exit_group].exits){
+		exits.push_back(exit);
+	}
+	if(exits.size() == 0){
+		debug("Nexus exit group has no exits.\n");
+	}
+	int exit = randomize_number(exits.size() - 1);
+	return data.story.tag_map[exits[exit]];
 }
 
 /*void
@@ -120,26 +97,21 @@ save_game(game_data active_data){
 }*/
 
 void
-alter_inventory(game_data &data, auto &st){
-	int open_inventory_space = data.player.inventory_size - data.player.inventory.size();
-	int map_size = st.item_change_map.size();
-	if ((open_inventory_space - map_size) < 0){
-		debug("No inventory" << '\n');
+alter_inventory(character& player, auto& change){
+	auto& inventory = player.inventory;
+	int open_inventory_space = player.inventory_size - inventory.size();
+
+	if ((open_inventory_space - change.second) < 0){
+		debug("Overburdened" << '\n');
 	}
-	for (const auto &[c_item, difference] : st.item_change_map){
-		bool applied = false;
-		for (auto &i : data.player.inventory){
-			if (i.item_ID == c_item){
-				i.quantity += difference;
-				applied = true;
-				debug(i.item_ID << ' ' << i.quantity << '\n');
-				break;
-			}
-		}
-		if (!applied && open_inventory_space > 0){
-			data.player.inventory.push_back(item_instance{c_item, difference});
-			debug("New item: " << c_item << '\n');
-		}
+
+	auto pos = std::find(inventory.begin(), inventory.end(), change.first);
+	if(pos != inventory.end()){
+		pos->quantity += change.second;
+		debug(change.first << " + " << change.second << '\n');
+	}else{
+		inventory.push_back({change.first, change.second});
+		debug("New item: " << change.first << '\n');
 	}
 }
 
@@ -147,15 +119,22 @@ alter_inventory(game_data &data, auto &st){
 void
 check_for_change_maps(game_data &data, auto &search_target){
 	auto &st = search_target;
-	if (!st.stat_change_map.empty()){
-		for (const auto &[target, difference] : st.stat_change_map) {
-			debug(target << ": " << data.player.attributes[target] << '\n');
-			data.player.attributes[target] += difference;
-			debug(target << ": " << data.player.attributes[target] << '\n');
+	if (!st.changes.empty()){
+		for (const auto& change : st.changes.stats_and_items) {
+			if(data.items.contains(change.first)){
+				alter_inventory(data.player, change);
+			}else if(data.player.attributes.contains(change.first)){
+				debug(change.first << ": " << data.player.attributes[change.first] << '\n');
+				data.player.attributes[change.first] += change.second;
+				debug(change.first << ": " << data.player.attributes[change.first] << '\n');
+			}else{
+				debug("Change tag has no matching stat or item" << change.first << '\n');
+			}
 		}
-	}
-	if (!st.item_change_map.empty()){
-		alter_inventory(data, st);
+		for (const auto& change : st.changes.decisions) {
+			data.player.decisions.emplace(change, true);
+			debug("Added decision: " << change << '\n');
+		}
 	}
 }
 
@@ -163,12 +142,13 @@ int
 update_UI(game_data& data, assets& assets, gui_core& gui){
 	auto& s = assets.elements["story_display"];
 
-	paragraph p = data.story[data.story_location];
+	auto location = data.story.tag_map[data.story.story_location];
+	paragraph p = data.story.paragraphs[location.second];
 	debug(p.text.data() << '\n');
 
-	s.text[0].update_text(p.text);
+	s.text[0].text = p.text;
 	
-	resize_element(s, gui.window, assets);
+	resize_element(s, gui, assets);
 	s.text[0].scroll_y = 0;
 
 	create_option_display(gui, assets, data);
@@ -178,25 +158,26 @@ update_UI(game_data& data, assets& assets, gui_core& gui){
 
 int
 progress_story(game_data &data, assets& main_assets, gui_core& gui, int choice){
-	paragraph p = data.story[data.story_location];
+	auto location = data.story.tag_map.at(data.story.story_location);
+	paragraph& p = data.story.paragraphs.at(location.second);
 
 	if(choice > p.options.size()){
-		debug("Clicked option does not exist");
+		debug("Clicked option does not exist.\n");
 		return 1;
 	}else{
-		option c = p.options[choice - 1];
+		option& c = p.options[choice - 1];
 		debug("Dest label: " << c.dest_label << '\n');
-		std::string next_paragraph_tag = c.dest_label;
+		auto dest = data.story.tag_map.at(c.dest_label);
 
 		check_for_change_maps(data, c);
 
-		debug("Is nexus: " << data.story[next_paragraph_tag].nexus << '\n');
-		if (data.story[next_paragraph_tag].nexus){
-			next_paragraph_tag = get_destination(data, data.story[next_paragraph_tag]);
+		if (dest.first == 'n'){
+			dest = get_destination(data, data.story.nexuses[dest.second]);
 		}
 
-		data.story_location = next_paragraph_tag;
-		check_for_change_maps(data, data.story[data.story_location]);
+		data.story.story_location = dest.first + std::to_string(dest.second);
+		paragraph& paragraph_location = data.story.paragraphs[dest.second];
+		check_for_change_maps(data, paragraph_location);
 
 		update_UI(data, main_assets, gui);
 		//save_game(data);

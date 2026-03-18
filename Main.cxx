@@ -2,30 +2,43 @@
 #include <sstream>
 #include <filesystem>
 #include <sdl3/SDL_filesystem.h>
+#include <random>
 
 #include "functions.h"
 
 #define debug(x)  std::cout << x
 
+int randomize_number(int range){
+	std::random_device random_device;
+	std::mt19937 generator(random_device());
+	std::uniform_int_distribution<size_t> distributor(0, range);
+	return distributor(generator);
+}
 
 int main(int argc, char** argv) {
-	debug("Original directory: " << std::filesystem::current_path() << '\n');
-	std::string base_path = SDL_GetBasePath();
-	std::filesystem::current_path(base_path);
-	debug("New directory: " << std::filesystem::current_path() << '\n');
-
-	game_data loaded_data = load_game();
-	if(loaded_data.story.empty()){
-		debug("Failed to load story");
-		return 1;
-	}
-
 	try {
+		debug("Original directory: " << std::filesystem::current_path() << '\n');
+		std::string base_path = SDL_GetBasePath();
+		std::filesystem::current_path(base_path);
+		debug("New directory: " << std::filesystem::current_path() << '\n');
+
+		files files;
+
+		game_data loaded_data("start");
+		debug(__LINE__ << '\n');
+		loaded_data.parse_story_file(files);
+		debug(__LINE__ << '\n');
+		
+		/*game_data loaded_data = load_game();
+		if(loaded_data.story.empty()){
+			debug("Failed to load story");
+			return 1;
+		}*/
 
 		gui_core gui;
 
 		assets assets(gui);
-		assets.rasterize_glyph_atlas(loaded_data.used_glyphs, gui);
+		assets.rasterize_glyph_atlas(loaded_data.story.used_glyphs, gui);
 
 		if(create_UI_elements(gui, assets, loaded_data)){
 			debug("Failed to create UI elements");

@@ -9,83 +9,7 @@
 #include <string>
 #include <functional>
 #include <filesystem>
-
-class glyph {
-	public:
-	std::string atlas_tag;
-	SDL_FRect atlas_position;
-
-	uint32_t unicode;
-	std::string font = "roboto_light";
-	SDL_Color color = {255, 255, 255, 255};
-	bool bold;
-	bool italic;
-	int size;
-
-	int min_x;
-	int max_x;
-	int min_y;
-	int max_y;
-	int advance;
-
-	glyph(){}
-	glyph(uint32_t u) : unicode(u){}
-};
-
-class item_instance {
-	public:
-	std::string item_ID;
-	int quantity;
-};
-
-class character {
-	public:
-	std::map<std::string, int> attributes = {
-		{"Reputation", 0},
-		{"Strenth", 0},
-		{"Agility", 0}
-	};
-	std::string lineage;
-	std::vector<item_instance> inventory;
-	int inventory_size = 30;
-	std::map<std::string, std::vector<item_instance>> stashed_items;
-	std::map<std::string, bool> decisions;
-
-	character():attributes(){};
-};
-
-class option {
-	public:
-	std::string prompt;
-	std::string dest_label;
-	std::map<std::string, int> stat_change_map;
-	std::map<std::string, int> item_change_map;
-
-	option(std::string p, std::string dest) : prompt(p), dest_label(dest){}
-};
-
-class paragraph{
-	public:
-	std::string text;
-	std::map<std::string, int> stat_change_map;
-	std::map<std::string, int> item_change_map;
-	std::vector<option> options;
-	//for nexuses
-	bool nexus = false;
-	int visits = 0;
-
-	paragraph() : text(""){}
-	paragraph(std::string t) : text(t){}
-	paragraph(std::string t, bool n) : text(t), nexus(n){}
-
-	void display() {
-		std::cout << text << '\n';
-		int n = 1;
-		for (const option &o : options) {
-			std::cout << "  " << n++ << ". " << o.prompt << '\n';
-		}
-	}
-};
+#include <list>
 
 class item {
 	public:
@@ -97,24 +21,212 @@ class item {
 	item(std::string i) : ID(i){}
 };
 
+class item_instance {
+	public:
+	std::string item_ID;
+	int quantity;
+
+	item_instance(std::string i, int q)
+	: item_ID(i), quantity(q){}
+
+	bool operator==(const item& item){
+		return item_ID == item.ID;
+	}
+};
+
+class character {
+	public:
+	std::map<std::string, int> attributes = {
+		{"Reputation", 0},
+		{"Strenth", 0},
+		{"Agility", 0}
+	};
+	std::string lineage;
+	std::list<item_instance> inventory;
+	int inventory_size = 30;
+	std::map<std::string, std::vector<item_instance>> stashed_items;
+	std::map<std::string, bool> decisions;
+
+	character():attributes(){};
+};
+
 class files {
 	public:
 	std::string story;
 	std::string items;
 
+	files();
 	files(std::string s, std::string i): story(s), items(i){};
+};
+
+class styling {
+	public:
+	std::map<std::string, std::string> texture_info = {
+		{"paragraph_border", ""},
+		{"paragraph_entry_anim", ""},
+		{"paragraph_exit_anim", ""},
+		{"option_border", ""},
+		{"option_entry_anim", ""},
+		{"option_exit_anim", ""}
+	};
+
+	std::list<std::string> bold_markers;
+	std::list<std::string> italic_markers;
+	std::string font;
+	SDL_Color color;
+	bool bold;
+	bool italic;
+
+	styling(){};
+
+	void add_marker(std::string, std::string);
+	void remove_marker(std::string);
+	void set_visual_info(std::string, std::string);
+};
+
+class glyph {
+	public:
+	uint32_t unicode;
+	std::string font = "roboto_light";
+	SDL_Color color = {255, 255, 255, 255};
+	bool bold;
+	bool italic;
+	int size;
+
+	glyph(){}
+	glyph(uint32_t u, styling& s) : unicode(u){
+		font = s.font;
+		color = s.color;
+		bold = s.bold;
+		italic = s.italic;
+	}
+
+	bool operator==(const glyph& g){
+		if(unicode != g.unicode){return false;}
+		if(font != g.font){return false;}
+		if(color.r != g.color.r){return false;}
+		if(color.g != g.color.g){return false;}
+		if(color.b != g.color.b){return false;}
+		if(color.a != g.color.a){return false;}
+		if(bold != g.bold){return false;}
+		if(italic != g.italic){return false;}
+		if(size != g.size){return false;}
+		return true;
+	}
+
+	bool operator<(const glyph& g) const{
+		if(unicode != g.unicode){return unicode < g.unicode;}
+		return false;
+	}
+};
+
+class glyph_hash {
+	size_t operator()(const glyph& g) const{
+		size_t u = g.unicode;
+		size_t f = std::hash<std::string>{}(g.font);
+		size_t c = g.color.r + g.color.g + g.color.b + g.color.a;
+		size_t b = std::hash<bool>{}(g.bold);
+		size_t i = std::hash<bool>{}(g.italic);
+		return u + f + c + b + i + g.size;
+	}
+};
+
+class story_variables {
+	public:
+	std::vector<std::pair<std::string, int>> stats_and_items;
+	std::vector<std::string> decisions;
+
+	story_variables(){};
+
+	void clear(){
+		this->stats_and_items.clear();
+		this->decisions.clear();
+	};
+
+	bool empty(){
+		bool empty = true;
+		if(!stats_and_items.empty()){empty = false;}
+		if(!decisions.empty()){empty = false;}
+		return empty;
+	}
+};
+
+class texture_info {
+	public:
+	std::string border_texture;
+	std::string entry_anim;
+	std::string exit_anim;
+
+	texture_info(){};
+	texture_info(std::string b, std::string en, std::string ex)
+	: border_texture(b), entry_anim(en), exit_anim(ex){}
+};
+
+class option {
+	public:
+	std::vector<glyph> prompt;
+	std::string dest_label;
+	story_variables reveal_conditions;
+	story_variables changes;
+	texture_info texture_data;
+
+	//Takes styling for textures
+	option(std::string dest, styling s) : dest_label(dest){
+		texture_data.border_texture = s.texture_info["option_border"];
+		texture_data.entry_anim = s.texture_info["option_entry_anim"];
+		texture_data.exit_anim = s.texture_info["option_exit_anim"];
+	}
+};
+
+class paragraph{
+	public:
+	std::vector<glyph> text;
+	story_variables changes;
+	std::vector<option> options;
+	texture_info texture_data;
+
+	paragraph(){}
+};
+
+class nexus {
+	public:
+
+	class exit_group {
+		public:
+		story_variables conditions;
+		std::vector<std::string> exits;
+
+		exit_group(){}
+	};
+
+	std::vector<exit_group> exits;
+	int visits = 0;
+
+	nexus(){}
+};
+
+class story {
+	public:
+	std::map<std::string, std::pair<char, int>> tag_map;
+	std::vector<paragraph> paragraphs;
+	std::vector<nexus> nexuses;
+	std::vector<glyph> used_glyphs;
+	std::string story_location;
+
+	story(){}
 };
 
 class game_data {
 	public:
-	std::map<std::string, paragraph> story;
-	std::string story_location;
-	std::vector<glyph> used_glyphs;
+	story story;
 	std::map<std::string, item> items;
 	character player;
 
-	game_data(auto s, std::string l, auto i, character p)
-	: story(s), story_location(l), items(i), player(p){};
+	game_data(std::string l){
+		story.story_location = l;
+	}
+
+	void parse_story_file(files&);
 };
 
 class gui_core {
@@ -122,6 +234,15 @@ class gui_core {
 	SDL_Window* window;
 	SDL_Renderer* renderer;
 	TTF_TextEngine* text_engine;
+
+	class window_size {
+		public:
+		int width;
+		int height;
+
+		window_size(){}
+		window_size(int w, int h) : width(w), height(h){}
+	};
 
 	gui_core(){
 		if(!SDL_Init(SDL_INIT_VIDEO)){
@@ -172,37 +293,28 @@ class relative_rect {
 	float relative_h = 1;
 
 	relative_rect(){}
-	relative_rect(float x, float y, float w, float h) : relative_x(x), relative_y(y), relative_w(w), relative_h(h){}
+
+	relative_rect(float x, float y, float w) 
+	: relative_x(x), relative_y(y), relative_w(w){}
+
+	relative_rect(float x, float y, float w, float h) 
+	: relative_x(x), relative_y(y), relative_w(w), relative_h(h){}
 };
 
 class relative_text {
 	public:
-	TTF_Text* TTF_text = nullptr;
-	std::string text;
-	std::string font_ID;
-	SDL_Color color;
+	SDL_Texture* texture;
+	std::vector<glyph> text;
 	relative_rect mask;
-	//x position relative to screen size, from left to right, 0... 1.
-	float relative_x;
-	//y position relative to screen size, from top to bottom, 0... 1.
-	float relative_y;
-	//wrap width relative to screen size, 0... 1.
-	float relative_wrap_width;
-	float width;
-	float height;
-	float x;
-	float y;
-	float wrap_width;
+	relative_rect dstrect;
 	int scroll_y = 0;
 
 	relative_text(){};
-	relative_text(std::string t, std::string f, SDL_Color c, relative_rect m, float x, float y, float w)
-	: text(t), font_ID(f), color(c), mask(m), relative_x(x), relative_y(y), relative_wrap_width(w){};
+	relative_text(std::vector<glyph> t, relative_rect m, relative_rect d)
+	 : text(t), mask(m), dstrect(d){}
 
-	void update_text(std::string new_text){
-		text = new_text;
-		TTF_SetTextString(TTF_text, new_text.data(), 0);
-	}
+	//resize also creates texture for new screen size
+	void resize(gui_core&, assets&);
 };
 
 class relative_texture {
@@ -231,21 +343,34 @@ class UI_element {
 	void determine_area();
 };
 
+class rasterized_glyph_info {
+	public:
+	std::string atlas_tag;
+	SDL_FRect position_on_atlas;
+	
+	int min_x;
+	int max_x;
+	int min_y;
+	int max_y;
+	int advance;
+
+	rasterized_glyph_info(){}
+	rasterized_glyph_info(std::string a, SDL_FRect p)
+	 : atlas_tag(a), position_on_atlas(p){}
+};
+
 class assets {
 	public:
-	//stores every created SDL_Texture, including glyph atlases
+	//Stores every permanent backend texture
 	std::map<std::string, SDL_Texture*> textures;
+	std::vector<SDL_Texture*> cached_text_textures;
 	std::map<std::string, TTF_Font*> fonts;
-	std::map<uint32_t, glyph> glyphs;
-	std::vector<TTF_Text*> created_texts;
+	std::map<glyph, rasterized_glyph_info> glyphs;
 	std::map<std::string, UI_element> elements;
 
 	assets(gui_core&);
 
 	~assets(){
-		for(auto& t : created_texts){
-			TTF_DestroyText(t);
-		}
 		for(auto& [tag, f] : fonts){
 			TTF_CloseFont(f);
 		}

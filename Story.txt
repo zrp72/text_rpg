@@ -1,44 +1,34 @@
-//Information:
-//Curly brackets contain option source and destination seperated by a colon
-//Parentheses hold stat changes
-//Square brackets hold inventory changes
-//Colons seperate tags from text for paragraphs and act as a >= for nexuses
+/DECISIONS CANNOT CONTAIN NUMBERS
 
-//In a nexus, if the check is:
-//  Only numbers it will be compared to the player attributes
-//  Has even a single letter it will read stashed items
-//  Is "True" or "False" it will be checked in player decisions
-//  Is "Visits" will check that specific nexus's visits 
+#<b> : bold
 
+|paragraph_border: gold_intricate
+|font: roboto_light
 
+\# <b>
+_____________________________________________________
+Start: The dim light of dawn creeps through the large
+ornate window next to your bed.
 
-Start: The world before you sits illuminated under a glowing sun.
+{Start:Town} <b> Take a carriage
+_____________________________________________________
 
-{Start:Town}(Rep -15) Turn left
-{Start:Wilderness} Turn right
+[Town:
+	Default:
+	Barred_Entry
 
+	-15 Rep,
+	-15 Str,
+	saved_town:
+		Villain
 
-[Town]:
-Villain
-Neutral = Rep:0
-Hero = Rep:10
-Exhausted = Rep:5, Weariness:15
-Testing = Visits:5
+	4 visits, 8 str:
+]
+_____________________________________________________
+Barred_Entry:(-2 Str): The guards cross their swords as you
+approach.
 
-Villain:[+1 Obliterator, +1 Healing Potion] |[bold]|The guards raise their swords as you approach.
-Who goes there?
+{Barred_Entry:Town}(-2 Rep) Spin around
+_____________________________________________________
 
-{Villain:Town} Loop back
-{Villain:Town} Loop back
-
-Neutral: The guards stand motionless as you pass.
-
-Hero: The guards bow as you stride into the town.
-
-Exhausted: As the guards come into view, your eyesight dims before everything goes dark.
-
-Wilderness: The grasses roll across the hills before you.
-
-{Wilderness:Start} Turn back
-
-Testing: It works!
+Villain:(+15 str) Darkness veils your vision.
