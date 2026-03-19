@@ -11,34 +11,31 @@
 //c will be moved to the character directly after the given end.
 std::string
 create_substring(std::string& story, int& c, std::string ends, bool lower){
+	std::string string;
+
+	size_t start = story.find_first_not_of(' ', c);
+	if(start == std::string::npos){
+		c = story.length();
+		return string;
+	}
 
 	size_t end = story.find_first_of(ends, c);
-	std::string string;
 	if(end == std::string::npos){
-		string = story.substr(c);
+		string = story.substr(start);
 		c = story.length();
+
 	}else{
-		string = story.substr(c, end - c);
+	
+		size_t trimmed_end = story.find_last_not_of(' ', end);
+		string = story.substr(start, trimmed_end - start + 1);
 		c = end + 1;
+
 	}
+	
 	if(lower){lowercase_string(string);}
 
 	debug("String created at c: " << string << '\n');
-	return string;
-}
 
-//Removes preceeding and proceeding whitespace from the given string.
-//
-//Takes by value, not reference, so output must be stored.
-std::string
-trim(std::string string){
-	size_t begin = string.find_first_not_of(" \n\t\v\f\r");
-	size_t end = string.find_last_not_of(" \n\t\v\f\r");
-	if(begin != std::string::npos){
-		string = string.substr(begin, end - begin + 1);
-	}else{
-		string.clear();
-	}
 	return string;
 }
 
@@ -80,7 +77,7 @@ parse_story_variables(std::string& story, int& c, std::string delimiters, std::s
 
 	bool _break = false;
 	while(c < story.length()){
-		conditions.push_back(trim(create_substring(story, c, delimiters, true)));
+		conditions.push_back(create_substring(story, c, delimiters, true));
 		for(char e : end){
 			if(story[c - 1] == e){
 				_break = true;
@@ -102,18 +99,17 @@ parse_story_variables(std::string& story, int& c, std::string delimiters, std::s
 		}else{
 
 			int n_begin = s.find_first_of("-+1234567890");
-			int n_end = s.find_last_of("-+1234567890");
+			int n_end = s.find_first_not_of("-+1234567890", n_begin);
 
 			std::string numbers = s.substr(n_begin, n_end - n_begin);
-			if(numbers.find_first_not_of("-+1234567890") != std::string::npos){
-				debug("Story number variable contains non-numeric symbol.\n");
-				continue;
-			}
 
 			int amount;
 			std::from_chars(numbers.data(), numbers.data() + numbers.length(), amount);
 
-			std::string amount_of = trim(s.substr(n_end + 1));
+			std::string amount_of = create_substring(s, n_end, "", true);
+			if(amount_of.find_first_of("-+1234567890") != std::string::npos){
+				debug("Some numbers may have been cut off within variable condition: " << s << '\n');
+			}
 			variables.stats_and_items.push_back({amount_of, amount});
 		}
 	}
@@ -124,7 +120,7 @@ void
 read_nexus_exits(std::string& story, int& c, nexus::exit_group& exit_group){
 
 	while(c < story.length()){
-		exit_group.exits.push_back(trim(create_substring(story, c, "\n]", true)));
+		exit_group.exits.push_back(create_substring(story, c, "\n]", true));
 
 		if(story[c - 1] == '\n' && check_double_newline(story, c)){
 			return;
@@ -242,13 +238,13 @@ game_data::parse_story_file(files& files){
 
 			if(undefine){
 
-				style.remove_marker(trim(create_substring(story, c, "\n", true)));
+				style.remove_marker(create_substring(story, c, "\n", true));
 			
 			}else{
 
 				style.add_marker(
-					trim(create_substring(story, c, ":", true)),
-					trim(create_substring(story, c, "\n", true))
+					create_substring(story, c, ":", true),
+					create_substring(story, c, "\n", true)
 				);
 
 			}
@@ -258,14 +254,14 @@ game_data::parse_story_file(files& files){
 		}
 		case '|': {
 			c += 1;
-			std::string marker = trim(create_substring(story, c, ":", true));
-			std::string meaning = trim(create_substring(story, c, "\n", true));
+			std::string marker = create_substring(story, c, ":", true);
+			std::string meaning = create_substring(story, c, "\n", true);
 			style.set_visual_info(marker, meaning);
 			continue;
 		}
 		case '[': {
 			c += 1;
-			std::string tag = std::string(trim(create_substring(story, c, ":", true)));
+			std::string tag = create_substring(story, c, ":", true);
 			int vector_pos = this->story.nexuses.size();
 			if(this->story.tag_map.contains(tag)){
 				debug("Nexus already exists:" << tag << '\n');
@@ -301,7 +297,7 @@ game_data::parse_story_file(files& files){
 		}
 		case '{': {
 			c += 1;
-			std::string tag = trim(create_substring(story, c, ":", true));
+			std::string tag = create_substring(story, c, ":", true);
 			if(!this->story.tag_map.contains(tag)){
 				debug("Attempted to attach option to undefined paragraph: " << tag << '\n');
 			}else if(this->story.tag_map[tag].first == 'n'){
