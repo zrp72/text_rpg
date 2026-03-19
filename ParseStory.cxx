@@ -5,29 +5,29 @@
 
 #define debug(x)  std::cout << x
 
-//Creates a string with all characters from the current story position to the given end.
+//Creates a substring from the given position to any of the given ends.
 //End will not be included in returned string.
 //
-//c will be moved to the character directly after the given end.
+//iterator will be moved to the character directly after the given end.
 std::string
-create_substring(std::string& story, int& c, std::string ends, bool lower){
+create_substring(std::string& source, int& c, std::string ends, bool lower){
 	std::string string;
 
-	size_t start = story.find_first_not_of(' ', c);
+	size_t start = source.find_first_not_of(' ', c);
 	if(start == std::string::npos){
-		c = story.length();
+		c = source.length();
 		return string;
 	}
 
-	size_t end = story.find_first_of(ends, c) + 1;
+	size_t end = source.find_first_of(ends, c) + 1;
 	if(end == std::string::npos){
-		string = story.substr(start);
-		c = story.length();
+		string = source.substr(start);
+		c = source.length();
 
 	}else{
 	
-		size_t trimmed_end = story.find_last_not_of(' ', end);
-		string = story.substr(start, trimmed_end - start + 1);
+		size_t trimmed_end = source.find_last_not_of(' ', end);
+		string = source.substr(start, trimmed_end - start + 1);
 		c = end + 1;
 
 	}
@@ -106,6 +106,7 @@ parse_story_variables(std::string& story, int& c, std::string delimiters, std::s
 			int amount;
 			std::from_chars(numbers.data(), numbers.data() + numbers.length(), amount);
 
+			//if/when revisited, be wary that n_end is moved by create_substring
 			std::string amount_of = create_substring(s, n_end, "", true);
 			if(amount_of.find_first_of("-+1234567890") != std::string::npos){
 				debug("Some numbers may have been cut off within variable condition: " << s << '\n');
@@ -144,7 +145,7 @@ styling::add_marker(std::string marker, std::string meaning){
 			}
 
 			bm.push_back(marker);
-			debug(__FILE__ << __LINE__ << '\n');
+			debug(__LINE__ << '\n');
 			return;
 		}else{
 			debug("Redefinition of bold marker: " << marker << '\n');
@@ -368,6 +369,7 @@ game_data::parse_story_file(files& files){
 				}
 
 				while(c < story.length()){
+					//implement style marker reading
 					if(story[c] == '\n'){
 						c += 1;
 						if(check_double_newline(story, c)){
