@@ -19,7 +19,7 @@ create_substring(std::string& story, int& c, std::string ends, bool lower){
 		return string;
 	}
 
-	size_t end = story.find_first_of(ends, c);
+	size_t end = story.find_first_of(ends, c) + 1;
 	if(end == std::string::npos){
 		string = story.substr(start);
 		c = story.length();
