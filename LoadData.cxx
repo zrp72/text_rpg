@@ -16,10 +16,12 @@
 #define debug(x)  std::cout << x
 
 void
-lowercase_string (std::string& text){
-	std::transform(text.begin(), text.end(), text.begin(),
-		[](unsigned char c){ return std::tolower(c); }
-	);
+lowercase_string(std::string& text){
+	for(char& c : text){
+		if(std::isalpha(c)){
+			std::tolower(c);
+		}
+	}
 }
 
 /*

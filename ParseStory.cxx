@@ -12,11 +12,17 @@
 std::string
 create_substring(std::string& story, int& c, std::string ends, bool lower){
 
-	int end = story.find_first_of(ends, c);
-	std::string string = story.substr(c, end - c);
+	size_t end = story.find_first_of(ends, c);
+	std::string string;
+	if(end == std::string::npos){
+		string = story.substr(c);
+		c = story.length();
+	}else{
+		string = story.substr(c, end - c);
+		c = end + 1;
+	}
 	if(lower){lowercase_string(string);}
 
-	c = end + 1;
 	debug("String created at c: " << string << '\n');
 	return string;
 }

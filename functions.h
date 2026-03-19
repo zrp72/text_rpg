@@ -17,7 +17,7 @@ int progress_story(game_data&, assets&, gui_core&, int);
 
 std::pair<bool, story_variables> compare_variables_against_player(game_data&, story_variables&);
 
-std::string lowercase_string(std::string&);
+void lowercase_string(std::string&);
 
 int randomize_number(int);
 
