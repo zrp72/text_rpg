@@ -19,7 +19,7 @@ create_substring(std::string& source, int& c, std::string ends, bool lower){
 		return string;
 	}
 
-	size_t end = source.find_first_of(ends, c) + 1;
+	size_t end = source.find_first_of(ends, c) - 1;
 	if(end == std::string::npos){
 		string = source.substr(start);
 		c = source.length();
@@ -28,13 +28,13 @@ create_substring(std::string& source, int& c, std::string ends, bool lower){
 	
 		size_t trimmed_end = source.find_last_not_of(' ', end);
 		string = source.substr(start, trimmed_end - start + 1);
-		c = end + 1;
+		c = end + 2;
 
 	}
 	
 	if(lower){lowercase_string(string);}
 
-	debug("String created at c: " << string << '\n');
+	debug("String cut at \"" << source[c - 1] << "\": " << string << '\n');
 
 	return string;
 }
@@ -237,16 +237,16 @@ game_data::parse_story_file(files& files){
 		case '#': {
 			c += 1;
 
+			debug(undefine << '\n');
 			if(undefine){
 
 				style.remove_marker(create_substring(story, c, "\n", true));
 			
 			}else{
 
-				style.add_marker(
-					create_substring(story, c, ":", true),
-					create_substring(story, c, "\n", true)
-				);
+				std::string marker = create_substring(story, c, ":", true);
+				std::string meaning = create_substring(story, c, "\n", true);
+				style.add_marker(marker, meaning);
 
 			}
 
@@ -255,9 +255,9 @@ game_data::parse_story_file(files& files){
 		}
 		case '|': {
 			c += 1;
-			std::string marker = create_substring(story, c, ":", true);
-			std::string meaning = create_substring(story, c, "\n", true);
-			style.set_visual_info(marker, meaning);
+			std::string visual = create_substring(story, c, ":", true);
+			std::string filename = create_substring(story, c, "\n", true);
+			style.set_visual_info(visual, filename);
 			continue;
 		}
 		case '[': {
