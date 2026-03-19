@@ -10,28 +10,13 @@
 //
 //c will be moved to the character directly after the given end.
 std::string
-create_string_at_c(std::string& story, int& c, std::string end, bool lower){
+create_substring(std::string& story, int& c, std::string ends, bool lower){
 
-	for(char& e : end){
-		debug("End" << e << '\n');
-	}
+	int end = story.find_first_of(ends, c);
+	std::string string = story.substr(c, end - c);
+	if(lower){lowercase_string(string);}
 
-	std::string string;
-	while(c < story.length()){
-		char ch = story[c];
-		if(lower && std::isalpha(ch)){ch = std::tolower(ch);}
-
-		for(char e : end){
-			if(story[c] == e){
-				c += 1;
-				debug("String cut at \"" << story[c - 1] << "\": " << string << '\n');
-				return string;
-			}
-		}
-
-		string += ch;
-		c += 1;
-	}
+	c = end + 1;
 	debug("String created at c: " << string << '\n');
 	return string;
 }
@@ -89,7 +74,7 @@ parse_story_variables(std::string& story, int& c, std::string delimiters, std::s
 
 	bool _break = false;
 	while(c < story.length()){
-		conditions.push_back(trim(create_string_at_c(story, c, delimiters, true)));
+		conditions.push_back(trim(create_substring(story, c, delimiters, true)));
 		for(char e : end){
 			if(story[c - 1] == e){
 				_break = true;
@@ -133,7 +118,7 @@ void
 read_nexus_exits(std::string& story, int& c, nexus::exit_group& exit_group){
 
 	while(c < story.length()){
-		exit_group.exits.push_back(trim(create_string_at_c(story, c, "\n]", true)));
+		exit_group.exits.push_back(trim(create_substring(story, c, "\n]", true)));
 
 		if(story[c - 1] == '\n' && check_double_newline(story, c)){
 			return;
@@ -251,13 +236,13 @@ game_data::parse_story_file(files& files){
 
 			if(undefine){
 
-				style.remove_marker(trim(create_string_at_c(story, c, "\n", true)));
+				style.remove_marker(trim(create_substring(story, c, "\n", true)));
 			
 			}else{
 
 				style.add_marker(
-					trim(create_string_at_c(story, c, ":", true)),
-					trim(create_string_at_c(story, c, "\n", true))
+					trim(create_substring(story, c, ":", true)),
+					trim(create_substring(story, c, "\n", true))
 				);
 
 			}
@@ -267,14 +252,14 @@ game_data::parse_story_file(files& files){
 		}
 		case '|': {
 			c += 1;
-			std::string marker = trim(create_string_at_c(story, c, ":", true));
-			std::string meaning = trim(create_string_at_c(story, c, "\n", true));
+			std::string marker = trim(create_substring(story, c, ":", true));
+			std::string meaning = trim(create_substring(story, c, "\n", true));
 			style.set_visual_info(marker, meaning);
 			continue;
 		}
 		case '[': {
 			c += 1;
-			std::string tag = std::string(trim(create_string_at_c(story, c, ":", true)));
+			std::string tag = std::string(trim(create_substring(story, c, ":", true)));
 			int vector_pos = this->story.nexuses.size();
 			if(this->story.tag_map.contains(tag)){
 				debug("Nexus already exists:" << tag << '\n');
@@ -310,7 +295,7 @@ game_data::parse_story_file(files& files){
 		}
 		case '{': {
 			c += 1;
-			std::string tag = trim(create_string_at_c(story, c, ":", true));
+			std::string tag = trim(create_substring(story, c, ":", true));
 			if(!this->story.tag_map.contains(tag)){
 				debug("Attempted to attach option to undefined paragraph: " << tag << '\n');
 			}else if(this->story.tag_map[tag].first == 'n'){
@@ -320,7 +305,7 @@ game_data::parse_story_file(files& files){
 
 				int pos = this->story.tag_map[tag].second;
 
-				std::string dstlabel = create_string_at_c(story, c, "}", true);
+				std::string dstlabel = create_substring(story, c, "}", true);
 				option option(dstlabel, style);
 
 				if(!option_conditions.empty()){
@@ -356,7 +341,7 @@ game_data::parse_story_file(files& files){
 			continue;
 		}
 		default: {
-			std::string tag = std::string(create_string_at_c(story, c, ":", true));
+			std::string tag = std::string(create_substring(story, c, ":", true));
 
 			if(this->story.tag_map.contains(tag)){
 				if(this->story.tag_map[tag].first == 'n'){
