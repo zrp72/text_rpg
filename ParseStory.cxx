@@ -1,6 +1,7 @@
 #include <charconv>
 #include <fstream>
 #include <string>
+#include <cctype>
 
 #include "functions.h"
 
@@ -20,19 +21,19 @@ create_substring(std::string& source, int& c, std::string ends, bool lower){
 		return string;
 	}
 
-	size_t end = source.find_first_of(ends, c) - 1;
+	size_t end = source.find_first_of(ends, c);
 	if(end == std::string::npos){
 		string = source.substr(start);
 		c = source.length();
 
 	}else{
-	
-		size_t trimmed_end = source.find_last_not_of(' ', end);
+
+		size_t trimmed_end = source.find_last_not_of(" \n\t\v\r\f", end - 1);
 		string = source.substr(start, trimmed_end - start + 1);
-		c = end + 2;
+		c = end + 1;
 
 	}
-	
+
 	if(lower){lowercase_string(string);}
 
 	debug("String cut at \"" << source[c - 1] << "\": " << string << '\n');
@@ -69,6 +70,7 @@ move_iterator_past_whitespace(std::string& story, int& c){
 
 //All end characters should also be included in delimiters.
 //
+//Created strings will be lowercased.
 //Numbers must be connected to be parsed correctly, meaning 0 whitespace.
 story_variables
 parse_story_variables(std::string& story, int& c, std::string delimiters, std::string end){
@@ -242,9 +244,10 @@ game_data::parse_story_file(files& files){
 			if(undefine){
 
 				style.remove_marker(create_substring(story, c, "\n", true));
-			
+
 			}else{
 
+				//revisit and figure out why create_substring cant be directly passed twice
 				std::string marker = create_substring(story, c, ":", true);
 				std::string meaning = create_substring(story, c, "\n", true);
 				style.add_marker(marker, meaning);
@@ -300,6 +303,7 @@ game_data::parse_story_file(files& files){
 		case '{': {
 			c += 1;
 			std::string tag = create_substring(story, c, ":", true);
+			debug("Option tag: " << tag << '\n');
 			if(!this->story.tag_map.contains(tag)){
 				debug("Attempted to attach option to undefined paragraph: " << tag << '\n');
 			}else if(this->story.tag_map[tag].first == 'n'){
@@ -316,8 +320,11 @@ game_data::parse_story_file(files& files){
 					option.reveal_conditions = option_conditions;
 				}
 
+				debug(__LINE__ << '\n');
 				move_iterator_past_whitespace(story, c);
+				debug(__LINE__ << '\n');
 				if(story[c] == '('){
+					c += 1;
 					option.changes = parse_story_variables(story, c, ",)", ")");
 					move_iterator_past_whitespace(story, c);
 				}
@@ -325,6 +332,7 @@ game_data::parse_story_file(files& files){
 				while(c < story.length() && story[c] != '\n'){
 					if(story[c] == '\n'){
 						while(option.prompt[option.prompt.size() - 1].unicode == ' '){
+							debug(__LINE__ << '\n');
 							option.prompt.pop_back();
 						}
 					}else if(story[c] == ' ' && story[c - 1] == ' '){
@@ -337,6 +345,7 @@ game_data::parse_story_file(files& files){
 						}
 
 						option.prompt.push_back(glyph);
+						c += 1;
 					}
 				}
 

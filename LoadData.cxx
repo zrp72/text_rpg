@@ -15,11 +15,14 @@
 
 #define debug(x)  std::cout << x
 
+
+#include <cctype>
+
 void
 lowercase_string(std::string& text){
 	for(char& c : text){
-		if(std::isalpha(c)){
-			std::tolower(c);
+		if(std::isupper(c)){
+			c = std::tolower(c);
 		}
 	}
 }

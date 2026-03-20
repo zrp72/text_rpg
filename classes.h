@@ -294,10 +294,10 @@ class relative_rect {
 
 	relative_rect(){}
 
-	relative_rect(float x, float y, float w) 
+	relative_rect(float x, float y, float w)
 	: relative_x(x), relative_y(y), relative_w(w){}
 
-	relative_rect(float x, float y, float w, float h) 
+	relative_rect(float x, float y, float w, float h)
 	: relative_x(x), relative_y(y), relative_w(w), relative_h(h){}
 };
 
@@ -347,7 +347,7 @@ class rasterized_glyph_info {
 	public:
 	std::string atlas_tag;
 	SDL_FRect position_on_atlas;
-	
+
 	int min_x;
 	int max_x;
 	int min_y;

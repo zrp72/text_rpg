@@ -10,7 +10,7 @@ _____________________________________________________
 Start: The dim light of dawn creeps through the large
 ornate window next to your bed.
 
-{Start:Town} <b> Take a carriage
+{Start:Town} <b> Take a carriage 
 _____________________________________________________
 
 [Town:
