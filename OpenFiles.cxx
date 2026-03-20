@@ -1,6 +1,7 @@
 #include <cstring>
 #include <fstream>
 #include <filesystem>
+#include <sstream>
 
 #include "functions.h"
 
