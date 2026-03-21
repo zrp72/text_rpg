@@ -61,7 +61,7 @@ create_option_display(gui_core& gui, assets& main_assets, game_data& data){
 	int row = 0;
 	float column_w = .3;
 	float column_h = .05;
-	
+
 	std::pair<char, int> location = data.story.tag_map[data.story.story_location];
 	if(location.first == 'n'){
 		debug("Story location set to nexus? " << data.story.story_location << '\n');

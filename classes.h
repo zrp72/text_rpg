@@ -57,16 +57,21 @@ class files {
 	files(std::string s, std::string i): story(s), items(i){};
 };
 
+class texture_info {
+	public:
+	std::string border;
+	std::string entry_anim;
+	std::string exit_anim;
+
+	texture_info(){};
+	texture_info(std::string b, std::string en, std::string ex)
+	: border(b), entry_anim(en), exit_anim(ex){}
+};
+
 class styling {
 	public:
-	std::map<std::string, std::string> texture_info = {
-		{"paragraph_border", ""},
-		{"paragraph_entry_anim", ""},
-		{"paragraph_exit_anim", ""},
-		{"option_border", ""},
-		{"option_entry_anim", ""},
-		{"option_exit_anim", ""}
-	};
+	texture_info paragraph;
+	texture_info option;
 
 	std::list<std::string> bold_markers;
 	std::list<std::string> italic_markers;
@@ -87,17 +92,7 @@ class glyph_styling {
 
 	glyph_styling(){}
 
-	bool operator==(const glyph_styling& other){
-		if(font != other.font){return false;}
-		if(color.r != other.color.r){return false;}
-		if(color.g != other.color.g){return false;}
-		if(color.b != other.color.b){return false;}
-		if(color.a != other.color.a){return false;}
-		if(bold != other.bold){return false;}
-		if(italic != other.italic){return false;}
-		if(size != other.size){return false;}
-		return true;
-	}
+	bool operator==(const glyph_styling&);
 
 };
 
@@ -109,27 +104,13 @@ class glyph {
 	glyph(){}
 	glyph(uint32_t u, glyph_styling s) : unicode(u), style(s){}
 
-	bool operator==(const glyph& other){
-		if(unicode != other.unicode){return false;}
-		if(style != other.style){return false;}
-		return true;
-	}
+	bool operator==(const glyph&);
 
-	bool operator<(const glyph& g) const{
-		if(unicode != g.unicode){return unicode < g.unicode;}
-		return false;
-	}
+	bool operator<(const glyph&)const;
 };
 
 class glyph_hash {
-	size_t operator()(const glyph& g) const{
-		size_t u = g.unicode;
-		size_t f = std::hash<std::string>{}(g.style.font);
-		size_t c = g.style.color.r + g.style.color.g + g.style.color.b + g.style.color.a;
-		size_t b = std::hash<bool>{}(g.style.bold);
-		size_t i = std::hash<bool>{}(g.style.italic);
-		return u + f + c + b + i + g.style.size;
-	}
+	size_t operator()(const glyph&);
 };
 
 class story_variables {
@@ -152,17 +133,6 @@ class story_variables {
 	}
 };
 
-class texture_info {
-	public:
-	std::string border_texture;
-	std::string entry_anim;
-	std::string exit_anim;
-
-	texture_info(){};
-	texture_info(std::string b, std::string en, std::string ex)
-	: border_texture(b), entry_anim(en), exit_anim(ex){}
-};
-
 class option {
 	public:
 	std::vector<glyph> prompt;
@@ -171,12 +141,8 @@ class option {
 	story_variables changes;
 	texture_info texture_data;
 
-	//Takes styling for textures
-	option(std::string dest, styling s) : dest_label(dest){
-		texture_data.border_texture = s.texture_info["option_border"];
-		texture_data.entry_anim = s.texture_info["option_entry_anim"];
-		texture_data.exit_anim = s.texture_info["option_exit_anim"];
-	}
+	option(std::string dest, texture_info t)
+	: dest_label(dest), texture_data(t){}
 };
 
 class paragraph{
@@ -186,7 +152,7 @@ class paragraph{
 	std::vector<option> options;
 	texture_info texture_data;
 
-	paragraph(){}
+	paragraph(texture_info t): texture_data(t){}
 };
 
 class nexus {

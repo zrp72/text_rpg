@@ -135,7 +135,7 @@ update_UI(game_data& data, assets& assets, gui_core& gui){
 	debug(p.text.data() << '\n');
 
 	s.text[0].text = p.text;
-	
+
 	resize_element(s, gui, assets);
 	s.text[0].scroll_y = 0;
 

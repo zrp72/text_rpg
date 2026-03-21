@@ -179,6 +179,8 @@ game_data::parse_story_file(files& files){
 	auto& used_glyphs = this->story.used_glyphs;
 
 	styling style;
+	texture_info option_textures;
+	texture_info paragraph_textures;
 	glyph_styling glyph_style;
 	std::string& story = files.story;
 	story_variables option_conditions;
@@ -245,8 +247,18 @@ game_data::parse_story_file(files& files){
 			std::string filename = create_substring(story, c, "\n", true);
 			if(visual == "font"){
 				glyph_style.font = filename;
-			}else if(style.texture_info.contains(visual)){
-				style.texture_info[visual] = filename;
+			}else if(visual == "option_border"){
+				option_textures.border = filename;
+			}else if(visual == "option_entry_anim"){
+				option_textures.entry_anim = filename;
+			}else if(visual == "option_exit_anim"){
+				option_textures.exit_anim = filename;
+			}else if(visual == "paragraph_border"){
+				paragraph_textures.border = filename;
+			}else if(visual == "paragraph_entry_anim"){
+				paragraph_textures.entry_anim = filename;
+			}else if(visual == "paragraph_exit_anim"){
+				paragraph_textures.exit_anim = filename;
 			}else{
 				debug("Undefined visual setting: " << visual << ': ' << filename << '\n');
 			}
@@ -302,7 +314,7 @@ game_data::parse_story_file(files& files){
 				int pos = this->story.tag_map[tag].second;
 
 				std::string dstlabel = create_substring(story, c, "}", true);
-				option option(dstlabel, style);
+				option option(dstlabel, option_textures);
 
 				if(!option_conditions.empty()){
 					option.reveal_conditions = option_conditions;
@@ -356,7 +368,7 @@ game_data::parse_story_file(files& files){
 				int vector_pos = this->story.paragraphs.size();
 				this->story.tag_map.emplace(tag, std::pair('p', vector_pos));
 
-				paragraph paragraph;
+				paragraph paragraph(paragraph_textures);
 
 				move_iterator_past_whitespace(story, c);
 				if(story[c] == '('){
