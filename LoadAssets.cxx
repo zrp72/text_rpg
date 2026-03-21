@@ -49,11 +49,11 @@ assets::rasterize_glyph_atlas(std::vector<glyph>& passed_glyphs, gui_core& gui){
 	SDL_Rect dst(0, 0, 0, 0);
 
 	for(auto& g : passed_glyphs){
-		std::string font_tag = g.font;
-		if(g.bold && !g.italic){font_tag += "(bold)";}
-		if(!g.bold && g.italic){font_tag += "(italic)";}
-		if(g.bold && g.italic){font_tag += "(bold-italic)";}
-		TTF_Font* font = fonts[font_tag];
+		std::string font_tag = g.style.font;
+		if(g.style.bold && !g.style.italic){font_tag += "(bold)";}
+		if(!g.style.bold && g.style.italic){font_tag += "(italic)";}
+		if(g.style.bold && g.style.italic){font_tag += "(bold-italic)";}
+		TTF_Font* font = fonts.at(font_tag);
 
 		if(!TTF_FontHasGlyph(font, g.unicode)){
 			debug(font << "does not contain glyph" << g.unicode << '\n');
@@ -68,7 +68,7 @@ assets::rasterize_glyph_atlas(std::vector<glyph>& passed_glyphs, gui_core& gui){
 				&rg.max_y,
 				&rg.advance);
 
-			SDL_Surface* s = TTF_RenderGlyph_Blended(font, g.unicode, g.color);
+			SDL_Surface* s = TTF_RenderGlyph_Blended(font, g.unicode, g.style.color);
 
 			if(dst.x + s->w > atlas->w){
 				dst.y += TTF_GetFontHeight(font);

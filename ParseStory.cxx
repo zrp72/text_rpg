@@ -181,23 +181,12 @@ styling::remove_marker(std::string marker){
 }
 
 void
-styling::set_visual_info(std::string visual, std::string file_name){
-
-	if(visual == "font"){
-		this->font = file_name;
-	}else if(this->texture_info.contains(visual)){
-		this->texture_info[visual] = file_name;
-	}else{
-		debug("Undefined visual setting: " << visual << ': ' << file_name << '\n');
-	}
-}
-
-void
 game_data::parse_story_file(files& files){
 
 	auto& used_glyphs = this->story.used_glyphs;
 
 	styling style;
+	glyph_styling glyph_style;
 	std::string& story = files.story;
 	story_variables option_conditions;
 
@@ -261,7 +250,13 @@ game_data::parse_story_file(files& files){
 			c += 1;
 			std::string visual = create_substring(story, c, ":", true);
 			std::string filename = create_substring(story, c, "\n", true);
-			style.set_visual_info(visual, filename);
+			if(visual == "font"){
+				glyph_style.font = filename;
+			}else if(style.texture_info.contains(visual)){
+				style.texture_info[visual] = filename;
+			}else{
+				debug("Undefined visual setting: " << visual << ': ' << filename << '\n');
+			}
 			continue;
 		}
 		case '[': {
@@ -338,7 +333,7 @@ game_data::parse_story_file(files& files){
 					}else if(story[c] == ' ' && story[c - 1] == ' '){
 						c += 1;
 					}else{
-						glyph glyph(story[c], style);
+						glyph glyph(story[c], glyph_style);
 
 						if(std::find(used_glyphs.begin(), used_glyphs.end(), glyph) == used_glyphs.end()){
 							used_glyphs.push_back(glyph);
@@ -388,14 +383,14 @@ game_data::parse_story_file(files& files){
 							}
 							break;
 						}else if(story[c] != ' ' && story[c - 2] != ' '){
-							paragraph.text.push_back(glyph(' ', style));
+							paragraph.text.push_back(glyph(' ', glyph_style));
 						}else if(story[c] == ' ' && story[c - 2] == ' '){
 							c += 1;
 						}
 					}else if(story[c] == ' ' && story[c - 1] == ' '){
 						c += 1;
 					}else{
-						glyph glyph(story[c], style);
+						glyph glyph(story[c], glyph_style);
 
 						if(std::find(used_glyphs.begin(), used_glyphs.end(), glyph) == used_glyphs.end()){
 							used_glyphs.push_back(glyph);

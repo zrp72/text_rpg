@@ -44,7 +44,7 @@ create_story_display(gui_core& gui, assets& assets, game_data& data){
 		relative_rect(.15, .1, .7)
 	));
 	for(auto& g : element.text[0].text){
-		debug(g.unicode);
+		debug(char(g.unicode));
 	}
 	debug('\n');
 
@@ -84,7 +84,7 @@ create_option_display(gui_core& gui, assets& main_assets, game_data& data){
 
 		debug("Option iteration: " << iteration << '\n');
 		for(auto& t : option.prompt){
-			debug(t.unicode);
+			debug(char(t.unicode));
 		}
 		debug('\n');
 
@@ -115,7 +115,7 @@ create_option_display(gui_core& gui, assets& main_assets, game_data& data){
 	element.mask = relative_rect(.1, .7, .85, .3);
 	element.visible = true;
 
-	debug("Element text vector size: " << element.text.size() << '\n');
+	debug("Amount of options: " << element.text.size() << '\n');
 
 	main_assets.add_element("option_display", element, gui);
 

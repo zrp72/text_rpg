@@ -25,15 +25,7 @@ int main(int argc, char** argv) {
 		files files;
 
 		game_data loaded_data("start");
-		debug(__LINE__ << '\n');
 		loaded_data.parse_story_file(files);
-		debug(__LINE__ << '\n');
-		
-		/*game_data loaded_data = load_game();
-		if(loaded_data.story.empty()){
-			debug("Failed to load story");
-			return 1;
-		}*/
 
 		gui_core gui;
 

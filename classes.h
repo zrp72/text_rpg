@@ -72,45 +72,48 @@ class styling {
 
 	std::list<std::string> bold_markers;
 	std::list<std::string> italic_markers;
-	std::string font;
-	SDL_Color color;
-	bool bold;
-	bool italic;
 
 	styling(){};
 
 	void add_marker(std::string, std::string);
 	void remove_marker(std::string);
-	void set_visual_info(std::string, std::string);
+};
+
+class glyph_styling {
+	public:
+	std::string font = "roboto_light";
+	SDL_Color color;
+	bool bold;
+	bool italic;
+	int size;
+
+	glyph_styling(){}
+
+	bool operator==(const glyph_styling& other){
+		if(font != other.font){return false;}
+		if(color.r != other.color.r){return false;}
+		if(color.g != other.color.g){return false;}
+		if(color.b != other.color.b){return false;}
+		if(color.a != other.color.a){return false;}
+		if(bold != other.bold){return false;}
+		if(italic != other.italic){return false;}
+		if(size != other.size){return false;}
+		return true;
+	}
+
 };
 
 class glyph {
 	public:
 	uint32_t unicode;
-	std::string font = "roboto_light";
-	SDL_Color color = {255, 255, 255, 255};
-	bool bold;
-	bool italic;
-	int size;
+	glyph_styling style;
 
 	glyph(){}
-	glyph(uint32_t u, styling& s) : unicode(u){
-		font = s.font;
-		color = s.color;
-		bold = s.bold;
-		italic = s.italic;
-	}
+	glyph(uint32_t u, glyph_styling s) : unicode(u), style(s){}
 
-	bool operator==(const glyph& g){
-		if(unicode != g.unicode){return false;}
-		if(font != g.font){return false;}
-		if(color.r != g.color.r){return false;}
-		if(color.g != g.color.g){return false;}
-		if(color.b != g.color.b){return false;}
-		if(color.a != g.color.a){return false;}
-		if(bold != g.bold){return false;}
-		if(italic != g.italic){return false;}
-		if(size != g.size){return false;}
+	bool operator==(const glyph& other){
+		if(unicode != other.unicode){return false;}
+		if(style != other.style){return false;}
 		return true;
 	}
 
@@ -123,11 +126,11 @@ class glyph {
 class glyph_hash {
 	size_t operator()(const glyph& g) const{
 		size_t u = g.unicode;
-		size_t f = std::hash<std::string>{}(g.font);
-		size_t c = g.color.r + g.color.g + g.color.b + g.color.a;
-		size_t b = std::hash<bool>{}(g.bold);
-		size_t i = std::hash<bool>{}(g.italic);
-		return u + f + c + b + i + g.size;
+		size_t f = std::hash<std::string>{}(g.style.font);
+		size_t c = g.style.color.r + g.style.color.g + g.style.color.b + g.style.color.a;
+		size_t b = std::hash<bool>{}(g.style.bold);
+		size_t i = std::hash<bool>{}(g.style.italic);
+		return u + f + c + b + i + g.style.size;
 	}
 };
 
