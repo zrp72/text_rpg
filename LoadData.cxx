@@ -18,15 +18,6 @@
 
 #include <cctype>
 
-void
-lowercase_string(std::string& text){
-	for(char& c : text){
-		if(std::isupper(c)){
-			c = std::tolower(c);
-		}
-	}
-}
-
 /*
 
 std::string randomize_lineage(){

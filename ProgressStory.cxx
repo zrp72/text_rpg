@@ -12,6 +12,7 @@
 #include <cstring>
 
 #include "functions.h"
+#include "basic_functions.h"
 
 #define debug(x)  std::cout << x
 

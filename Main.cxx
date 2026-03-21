@@ -8,13 +8,6 @@
 
 #define debug(x)  std::cout << x
 
-int randomize_number(int range){
-	std::random_device random_device;
-	std::mt19937 generator(random_device());
-	std::uniform_int_distribution<size_t> distributor(0, range);
-	return distributor(generator);
-}
-
 int main(int argc, char** argv) {
 	try {
 		debug("Original directory: " << std::filesystem::current_path() << '\n');

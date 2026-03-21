@@ -4,6 +4,7 @@
 #include <cctype>
 
 #include "functions.h"
+#include "basic_functions.h"
 
 #define debug(x)  std::cout << x
 
@@ -59,13 +60,6 @@ check_double_newline(std::string& story, int c){
 		}
 	}
 	return false;
-}
-
-void
-move_iterator_past_whitespace(std::string& story, int& c){
-	while(std::isspace(story[c])){
-		c += 1;
-	}
 }
 
 //All end characters should also be included in delimiters.
