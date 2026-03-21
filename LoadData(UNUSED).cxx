@@ -1,3 +1,4 @@
+/*
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -18,7 +19,6 @@
 
 #include <cctype>
 
-/*
 
 std::string randomize_lineage(){
 	std::string lineage = "";

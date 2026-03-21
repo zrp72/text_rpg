@@ -1,15 +1,9 @@
 #include <iostream>
-#include <sstream>
-#include <fstream>
 #include <vector>
 #include <map>
-#include <limits>
-#include <random>
-#include <filesystem>
 
 #include <stdexcept> //may not be needed
 #include <cerrno>
-#include <cstring>
 
 #include "functions.h"
 #include "basic_functions.h"
@@ -89,13 +83,6 @@ get_destination(game_data &data, nexus &nexus){
 	int exit = randomize_number(exits.size() - 1);
 	return data.story.tag_map[exits[exit]];
 }
-
-/*void
-save_game(game_data active_data){
-	std::ofstream save_data;
-	save_data.open("save_data");
-	save_data.close();
-}*/
 
 void
 alter_inventory(character& player, auto& change){

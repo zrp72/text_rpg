@@ -1,8 +1,6 @@
 #include <iostream>
-#include <sstream>
 #include <filesystem>
 #include <sdl3/SDL_filesystem.h>
-#include <random>
 
 #include "functions.h"
 
