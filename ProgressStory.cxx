@@ -128,18 +128,12 @@ check_for_change_maps(game_data &data, auto &search_target){
 
 int
 update_UI(game_data& data, assets& assets, gui_core& gui){
-	auto& s = assets.elements["story_display"];
 
-	auto location = data.story.tag_map[data.story.story_location];
-	paragraph p = data.story.paragraphs[location.second];
-	debug(p.text.data() << '\n');
-
-	s.text[0].text = p.text;
-
-	resize_element(s, gui, assets);
-	s.text[0].scroll_y = 0;
+	create_story_display(gui, assets, data);
+	resize_element(assets.elements.at("story_display"), gui, assets);
 
 	create_option_display(gui, assets, data);
+	resize_element(assets.elements.at("option_display"), gui, assets);
 
 	return 0;
 }
@@ -155,15 +149,15 @@ progress_story(game_data &data, assets& main_assets, gui_core& gui, int choice){
 	}else{
 		option& c = p.options[choice - 1];
 		debug("Dest label: " << c.dest_label << '\n');
-		auto dest = data.story.tag_map.at(c.dest_label);
+		auto& dest = data.story.tag_map.at(c.dest_label);
 
 		check_for_change_maps(data, c);
 
-		if (dest.first == 'n'){
+		if(dest.first == 'n'){
 			dest = get_destination(data, data.story.nexuses[dest.second]);
 		}
 
-		data.story.story_location = dest.first + std::to_string(dest.second);
+		data.story.story_location = c.dest_label;
 		paragraph& paragraph_location = data.story.paragraphs[dest.second];
 		check_for_change_maps(data, paragraph_location);
 

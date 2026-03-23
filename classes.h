@@ -85,10 +85,10 @@ class styling {
 class glyph_styling {
 	public:
 	std::string font = "roboto_light";
-	SDL_Color color;
-	bool bold;
-	bool italic;
-	int size;
+	SDL_Color color = {255, 255, 255, 255};
+	bool bold = false;
+	bool italic = false;
+	int size = 24;
 
 	glyph_styling(){}
 
@@ -270,18 +270,14 @@ class relative_rect {
 
 class relative_text {
 	public:
-	SDL_Texture* texture;
 	std::vector<glyph> text;
 	relative_rect mask;
-	relative_rect dstrect;
+	relative_rect canvas;
 	int scroll_y = 0;
 
 	relative_text(){};
-	relative_text(std::vector<glyph> t, relative_rect m, relative_rect d)
-	 : text(t), mask(m), dstrect(d){}
-
-	//resize also creates texture for new screen size
-	void resize(gui_core&, assets&);
+	relative_text(std::vector<glyph> t, relative_rect m, relative_rect c)
+	: text(t), mask(m), canvas(c){}
 };
 
 class relative_texture {
@@ -319,18 +315,17 @@ class rasterized_glyph_info {
 	int max_x;
 	int min_y;
 	int max_y;
+	float ascent;
+	float descent;
 	int advance;
 
 	rasterized_glyph_info(){}
-	rasterized_glyph_info(std::string a, SDL_FRect p)
-	 : atlas_tag(a), position_on_atlas(p){}
 };
 
 class assets {
 	public:
-	//Stores every permanent backend texture
+	//Includes glyph atlas textures
 	std::map<std::string, SDL_Texture*> textures;
-	std::vector<SDL_Texture*> cached_text_textures;
 	std::map<std::string, TTF_Font*> fonts;
 	std::map<glyph, rasterized_glyph_info> glyphs;
 	std::map<std::string, UI_element> elements;

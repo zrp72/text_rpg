@@ -24,9 +24,9 @@ UI_element::determine_area(){
 		resize(t.relative_x, t.relative_y, t.relative_w, t.relative_h);
 	}
 	for(auto &txt : this->text){
-		auto& d = txt.dstrect;
+		auto& c = txt.canvas;
 		auto& m = txt.mask;
-		resize(d.relative_x, d.relative_y, d.relative_h, m.relative_h);
+		resize(c.relative_x, c.relative_y, c.relative_w, m.relative_h);
 	}
 
 	this->area = {min_x, min_y, top_w - min_x, top_h - min_y};
@@ -70,6 +70,7 @@ create_option_display(gui_core& gui, assets& main_assets, game_data& data){
 
 	int iteration = 1;
 	for(auto& option : data.story.paragraphs[location.second].options){
+		debug("Option iteration: " << iteration << '\n');
 		if(column > 1){row += 1; column = 0;}
 		if(!option.reveal_conditions.empty()){
 			auto viable = compare_variables_against_player(data, option.reveal_conditions);
@@ -82,7 +83,6 @@ create_option_display(gui_core& gui, assets& main_assets, game_data& data){
 			}
 		}
 
-		debug("Option iteration: " << iteration << '\n');
 		for(auto& t : option.prompt){
 			debug(char(t.unicode));
 		}

@@ -47,7 +47,7 @@ assets::rasterize_glyph_atlas(std::vector<glyph>& passed_glyphs, gui_core& gui){
 
 	int atlas_iteration = 1;
 	std::string atlas_tag = "glyph_atlas" + std::to_string(atlas_iteration);
-	SDL_Surface* atlas = SDL_CreateSurface(512, 512, SDL_PIXELFORMAT_ARGB8888);
+	SDL_Surface* atlas = SDL_CreateSurface(1024, 1024, SDL_PIXELFORMAT_ARGB8888);
 
 	SDL_Rect dst(0, 0, 0, 0);
 
@@ -61,6 +61,7 @@ assets::rasterize_glyph_atlas(std::vector<glyph>& passed_glyphs, gui_core& gui){
 		if(!TTF_FontHasGlyph(font, g.unicode)){
 			debug(font << "does not contain glyph" << g.unicode << '\n');
 		}else{
+			debug("Rasterized glyph: " << char(g.unicode) << '\n');
 
 			rasterized_glyph_info rg;
 
@@ -70,6 +71,9 @@ assets::rasterize_glyph_atlas(std::vector<glyph>& passed_glyphs, gui_core& gui){
 				&rg.min_y,
 				&rg.max_y,
 				&rg.advance);
+
+			rg.ascent = TTF_GetFontAscent(font);
+			rg.descent = TTF_GetFontDescent(font);
 
 			SDL_Surface* s = TTF_RenderGlyph_Blended(font, g.unicode, g.style.color);
 
@@ -82,19 +86,24 @@ assets::rasterize_glyph_atlas(std::vector<glyph>& passed_glyphs, gui_core& gui){
 				textures[atlas_tag] = SDL_CreateTextureFromSurface(gui.renderer, atlas);
 				atlas_iteration += 1;
 				atlas_tag = "glyph_atlas" + std::to_string(atlas_iteration);
-				SDL_ClearSurface(atlas, 0, 0, 0, 255);
+				SDL_ClearSurface(atlas, 0, 0, 0, 0);
 				dst.x = 0;
 				dst.y = 0;
 			}
 
 			SDL_BlitSurface(s, NULL, atlas, &dst);
-			glyphs[g] = {atlas_tag, SDL_FRect(dst.x, dst.y, s->w, s->h)};
+			SDL_Rect position_on_atlas(dst.x, dst.y, s->w, s->h);
+			SDL_RectToFRect(&position_on_atlas, &rg.position_on_atlas);
+			debug(char(g.unicode) << " is on " << atlas_tag << " at position " << int(position_on_atlas.x) << int(position_on_atlas.y) << int(position_on_atlas.w) << int(position_on_atlas.h) << '\n');
+			
+			rg.atlas_tag = atlas_tag;
+			this->glyphs[g] = rg;
 			dst.x += s->w;
 			SDL_DestroySurface(s);
 		}
 	}
 
-	textures["glyph_atlas" + std::to_string(atlas_iteration)] = SDL_CreateTextureFromSurface(gui.renderer, atlas);
+	textures[atlas_tag] = SDL_CreateTextureFromSurface(gui.renderer, atlas);
 	SDL_DestroySurface(atlas);
 }
 

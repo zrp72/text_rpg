@@ -25,7 +25,7 @@ _____________________________________________________
 	4 visits, 8 str:
 ]
 _____________________________________________________
-Barred_Entry:(-2 Str): The guards cross their swords as you
+Barred_Entry: The guards cross their swords as you
 approach.
 
 {Barred_Entry:Town}(-2 Rep) Spin around

@@ -14,87 +14,6 @@ TTF_GetStringSize
 #define debug(x)  std::cout << x
 
 void
-relative_text::resize(gui_core& gui, assets& assets){
-	gui_core::window_size ws;
-	SDL_GetWindowSizeInPixels(gui.window, &ws.width, &ws.height);
-
-	this->dstrect.SDL_rect.x = ws.width * this->dstrect.relative_x;
-	this->dstrect.SDL_rect.y = ws.height * this->dstrect.relative_y;
-	this->dstrect.SDL_rect.w = ws.width * this->dstrect.relative_w;
-
-	class word {
-		public:
-		std::vector<glyph> characters;
-		int length = 0;
-
-		word(){}
-	};
-
-	class line {
-		public:
-		std::vector<word> text;
-		int length = 0;
-
-		line(){}
-	};
-
-	int highest;
-	int lowest;
-	std::vector<word> words;
-	word current_word;
-	for(auto& glyph : this->text){
-		if(glyph.unicode != U' '){
-			auto& glyph_data = assets.glyphs.at(glyph);
-			highest = std::max(highest, glyph_data.max_x);
-			lowest = std::min(lowest, glyph_data.min_x);
-			current_word.characters.push_back(glyph);
-			current_word.length += glyph_data.max_x;
-		}else{
-			words.push_back(current_word);
-			current_word = word();
-		}
-	}
-	if(!current_word.characters.empty()){
-		words.push_back(current_word);
-	}
-
-	int font_height = highest - lowest;
-
-	std::vector<line> lines;
-	line current_line;
-	for(auto& word : words){
-		if(current_line.length + word.length > dstrect.SDL_rect.w){
-			lines.push_back(current_line);
-			current_line = line();
-		}else{
-			current_line.text.push_back(word);
-			current_line.length += word.length;
-		}
-	}
-	if(!current_line.text.empty()){
-		lines.push_back(current_line);
-	}
-
-	int height = lines.size() * font_height;
-	SDL_Surface* text_texture = SDL_CreateSurface(this->dstrect.SDL_rect.w, height,
-		SDL_PIXELFORMAT_ARGB8888);
-
-	int pen_x = 0;
-	int pen_y = 0;
-	for(line& line : lines){
-		for(word& word : line.text){
-			for(glyph& glyph : word.characters){
-
-			}
-		}
-	}
-
-	int max_scroll = this->dstrect.SDL_rect.h - this->mask.SDL_rect.h;
-	max_scroll = std::max(0, max_scroll);
-	this->scroll_y = std::clamp(this->scroll_y, 0, max_scroll);
-}
-
-void
 resize_rect(relative_rect &rect, SDL_Window* window){
 	gui_core::window_size ws;
 	SDL_GetWindowSizeInPixels(window, &ws.width, &ws.height);
@@ -115,12 +34,123 @@ resize_element(UI_element &obj, gui_core& gui, assets& assets){
 	}
 	for (auto &text : obj.text) {
 		resize_rect(text.mask, gui.window);
-		text.resize(gui, assets);
+		resize_rect(text.canvas, gui.window);
+
+		int max_scroll = text.canvas.SDL_rect.h - text.mask.SDL_rect.h;
+		max_scroll = std::max(0, max_scroll);
+		text.scroll_y = std::clamp(text.scroll_y, 0, max_scroll);
 	}
 
 	int max_scroll = obj.area.SDL_rect.h - obj.mask.SDL_rect.h;
 	max_scroll = std::max(0, max_scroll);
 	obj.scroll_y = std::clamp(obj.scroll_y, 0, max_scroll);
+}
+
+void
+render_glyph_text(SDL_Renderer* renderer, assets& assets, relative_text text, int scroll){
+
+	std::vector<std::vector<glyph>> words;
+	std::vector<glyph> word;
+	float ascent = 0;
+	float descent = 0;
+	int default_space = 0;
+	for(glyph& g : text.text){
+
+		auto& glyph_data = assets.glyphs.at(g);
+		ascent = std::max(ascent, glyph_data.ascent);
+		descent = std::min(descent, glyph_data.descent);
+
+		if(g.unicode == '\n'){
+			word.push_back(g);
+			words.push_back(word);
+			word.clear();
+		}else if(g.unicode == ' '){
+			default_space = std::max(default_space, glyph_data.advance);
+			if(!word.empty()){
+				words.push_back(word);
+				word.clear();
+			}
+		}else{
+			word.push_back(g);
+		}
+	}
+	if(!word.empty()){
+		words.push_back(word);
+	}
+
+	float font_height = (ascent - descent) * 1.4;
+	float max_line_size = text.canvas.SDL_rect.w * 0.9;//ensuring space for spacing
+	float line_size = 0;
+	int word_count = 0;
+	int line = 1;
+	int pen_x;
+	int pen_y;
+
+	auto render_glyph = [&](glyph& glyph){
+		auto& glyph_data = assets.glyphs.at(glyph);
+		SDL_Texture* atlas = assets.textures.at(glyph_data.atlas_tag);
+		SDL_FRect& srcrect = glyph_data.position_on_atlas;
+		SDL_FRect dstrect(pen_x + glyph_data.min_x, pen_y,
+			srcrect.w, srcrect.h);
+		SDL_RenderTexture(renderer, atlas, &srcrect, &dstrect);
+		pen_x += glyph_data.advance;
+	};
+
+	for(int w = 0; w < words.size(); ++w){
+		float word_size = 0;
+		for(auto& glyph : words.at(w)){
+			debug(char(glyph.unicode));
+			word_size += assets.glyphs.at(glyph).advance;
+		}
+		debug('\n');
+
+		if(line_size + word_size <= max_line_size){
+
+			line_size += word_size;
+			word_count += 1;
+			debug("Word count: " << word_count << '\n');
+
+		}else{
+
+			debug("Rendering line.\n\n");
+			float spacing = (text.canvas.SDL_rect.w - line_size) / (word_count - 1);
+			pen_x = text.canvas.SDL_rect.x;
+			pen_y = (text.canvas.SDL_rect.y + (font_height * line) + descent) - scroll;
+
+			if(word_count == 0){
+				//TODO: Write some sort of word splitter
+			}else{
+				while(word_count != 0){
+					for(auto& glyph : words.at(w - word_count)){
+						if(!assets.glyphs.contains(glyph)){
+							debug("Glyph \"" << char(glyph.unicode) << "\" has not been rasterized.\n");
+						}else{
+							render_glyph(glyph);
+						}
+					}
+					word_count -= 1;
+					pen_x += spacing;
+				}
+				line += 1;
+				line_size = word_size;
+				word_count = 1;
+			}
+		}
+	}
+	debug("Rendering final line.\n\n");
+	pen_x = text.canvas.SDL_rect.x;
+	pen_y = (text.canvas.SDL_rect.y + (font_height * line) + descent) - scroll;
+	while(word_count > 0){
+		for(auto& glyph : words.at(words.size() - word_count)){
+			if(!assets.glyphs.contains(glyph)){
+				debug("Glyph \"" << char(glyph.unicode) << "\" has not been rasterized.\n");
+			}else{
+				render_glyph(glyph);
+			}
+		}
+		word_count -= 1;
+		pen_x += default_space;
+	}
 }
 
 void
@@ -137,6 +167,7 @@ render_element(const UI_element& obj, gui_core& gui, assets& assets){
 	render_debug_hitbox(gui, obj.area.SDL_rect, 255, 192, 203, 255);
 
 	SDL_SetRenderClipRect(gui.renderer, &obj.mask.SDL_rect);
+	SDL_SetRenderTarget(gui.renderer, NULL);
 
 	for(auto &t : obj.texture){
 		SDL_FRect srcrect;
@@ -160,11 +191,16 @@ render_element(const UI_element& obj, gui_core& gui, assets& assets){
 
 			render_debug_hitbox(gui, mask, 255, 255, 255, 255);
 
-			SDL_FRect dstrect;
-			SDL_RectToFRect(&t.dstrect.SDL_rect, &dstrect);
-			SDL_RenderTexture(gui.renderer, t.texture, NULL, &dstrect);
+			render_glyph_text(gui.renderer, assets, t, t.scroll_y + obj.scroll_y);
+
+			/*
+			for(auto& glyph : t.text){
+				debug(char(glyph.unicode));
+			}
+			debug('\n');*/
 		}
 	}
+	SDL_SetRenderClipRect(gui.renderer, NULL);
 }
 
 int
@@ -207,7 +243,7 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
 					for(auto &text : obj.text){
 
 						if(SDL_PointInRect(&mouse_pos, &text.mask.SDL_rect)){
-							int max_scroll = text.dstrect.SDL_rect.h - text.mask.SDL_rect.h;
+							int max_scroll = text.canvas.SDL_rect.h - text.mask.SDL_rect.h;
 							text.scroll_y -= event.wheel.y * 25;
 							clamp_scroll(max_scroll, text.scroll_y);
 
@@ -251,6 +287,7 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
 		}
 
 		SDL_SetRenderDrawColor(gui.renderer, 0, 0, 0, 255);
+		SDL_SetRenderTarget(gui.renderer, NULL);
 		SDL_RenderClear(gui.renderer);
 
 		for (const auto &[tag, obj] : assets.elements){
@@ -259,7 +296,21 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
 			}
 		}
 
-		SDL_RenderTexture(gui.renderer, assets.textures["glyph_atlas1"], NULL, NULL);
+		/*
+		SDL_FRect dstrect(0, 0, 50, 50);
+		for(auto& glyph : assets.glyphs){
+			debug("Rendering glyph " << char(glyph.first.unicode) << '\n');
+			auto srcrect = glyph.second.position_on_atlas;
+			auto atlas = glyph.second.atlas_tag;
+			SDL_RenderTexture(gui.renderer, assets.textures.at(atlas), &srcrect, &dstrect);
+			dstrect.y += 50;
+			if(dstrect.y > 500){
+				dstrect.x += 50;
+				dstrect.y = 0;
+			}
+		}
+		*/
+		//SDL_RenderTexture(gui.renderer, assets.textures.at("glyph_atlas1"), NULL, NULL);
 
 		SDL_RenderPresent(gui.renderer);
 	}

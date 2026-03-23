@@ -329,13 +329,10 @@ game_data::parse_story_file(files& files){
 					move_iterator_past_whitespace(story, c);
 				}
 
-				while(c < story.length() && story[c] != '\n'){
+				while(c < story.length()){
 					if(story[c] == '\n'){
-						while(option.prompt[option.prompt.size() - 1].unicode == ' '){
-							debug(__LINE__ << '\n');
-							option.prompt.pop_back();
-						}
-					}else if(story[c] == ' ' && story[c - 1] == ' '){
+						break;
+					}else if(story[c] == ' ' && option.prompt.back().unicode == ' '){
 						c += 1;
 					}else{
 						glyph glyph(story[c], glyph_style);
@@ -347,6 +344,9 @@ game_data::parse_story_file(files& files){
 						option.prompt.push_back(glyph);
 						c += 1;
 					}
+				}
+				while(option.prompt.back().unicode == ' '){
+					option.prompt.pop_back();
 				}
 
 				this->story.paragraphs[pos].options.push_back(option);
@@ -379,7 +379,7 @@ game_data::parse_story_file(files& files){
 				}
 
 				while(c < story.length()){
-					//implement style marker reading
+					//TODO: implement style marker reading
 					if(story[c] == '\n'){
 						c += 1;
 						if(check_double_newline(story, c)){
@@ -387,12 +387,13 @@ game_data::parse_story_file(files& files){
 								paragraph.text.pop_back();
 							}
 							break;
-						}else if(story[c] != ' ' && story[c - 2] != ' '){
-							paragraph.text.push_back(glyph(' ', glyph_style));
-						}else if(story[c] == ' ' && story[c - 2] == ' '){
-							c += 1;
+						}else{
+							if(paragraph.text.back().unicode != ' '){
+								paragraph.text.push_back(glyph(' ', glyph_style));
+							}
+							move_iterator_past_whitespace(story, c);
 						}
-					}else if(story[c] == ' ' && story[c - 1] == ' '){
+					}else if(story[c] == ' ' && paragraph.text.back().unicode == ' '){
 						c += 1;
 					}else{
 						glyph glyph(story[c], glyph_style);
@@ -404,6 +405,9 @@ game_data::parse_story_file(files& files){
 						paragraph.text.push_back(glyph);
 						c += 1;
 					}
+				}
+				while(paragraph.text.back().unicode == ' '){
+					paragraph.text.pop_back();
 				}
 
 				this->story.paragraphs.push_back(paragraph);
