@@ -21,9 +21,6 @@ assets::assets(gui_core& gui){
 	};
 
 	load_font("roboto_light", "Roboto-Light.ttf");
-	load_font("roboto_light(bold)", "Roboto-Bold.ttf");
-	load_font("roboto_light(italic)", "Roboto-LightItalic.ttf");
-	load_font("roboto_light(bold-italic)", "Roboto-BoldItalic.ttf");
 
 
 	std::filesystem::current_path(original_path / "assets");
@@ -48,15 +45,19 @@ assets::rasterize_glyph_atlas(std::vector<glyph>& passed_glyphs, gui_core& gui){
 	int atlas_iteration = 1;
 	std::string atlas_tag = "glyph_atlas" + std::to_string(atlas_iteration);
 	SDL_Surface* atlas = SDL_CreateSurface(1024, 1024, SDL_PIXELFORMAT_ARGB8888);
+	SDL_SetSurfaceBlendMode(atlas, SDL_BLENDMODE_BLEND);
 
+	int highest_font_height = 0;
 	SDL_Rect dst(0, 0, 0, 0);
 
 	for(auto& g : passed_glyphs){
 		std::string font_tag = g.style.font;
-		if(g.style.bold && !g.style.italic){font_tag += "(bold)";}
-		if(!g.style.bold && g.style.italic){font_tag += "(italic)";}
-		if(g.style.bold && g.style.italic){font_tag += "(bold-italic)";}
 		TTF_Font* font = fonts.at(font_tag);
+		if(g.style.bold && !g.style.italic){TTF_SetFontStyle(font, TTF_STYLE_BOLD);}
+		if(!g.style.bold && g.style.italic){TTF_SetFontStyle(font, TTF_STYLE_ITALIC);}
+		if(g.style.bold && g.style.italic){TTF_SetFontStyle(font, TTF_STYLE_BOLD | TTF_STYLE_ITALIC);}
+		
+		highest_font_height = std::max(highest_font_height, TTF_GetFontHeight(font));
 
 		if(!TTF_FontHasGlyph(font, g.unicode)){
 			debug(font << "does not contain glyph" << g.unicode << '\n');
@@ -76,9 +77,11 @@ assets::rasterize_glyph_atlas(std::vector<glyph>& passed_glyphs, gui_core& gui){
 			rg.descent = TTF_GetFontDescent(font);
 
 			SDL_Surface* s = TTF_RenderGlyph_Blended(font, g.unicode, g.style.color);
+			dst.w = s->w;
+			dst.h = s->h;
 
 			if(dst.x + s->w > atlas->w){
-				dst.y += TTF_GetFontHeight(font);
+				dst.y += highest_font_height;
 				dst.x = 0;
 			}
 
@@ -92,8 +95,8 @@ assets::rasterize_glyph_atlas(std::vector<glyph>& passed_glyphs, gui_core& gui){
 			}
 
 			SDL_BlitSurface(s, NULL, atlas, &dst);
-			SDL_Rect position_on_atlas(dst.x, dst.y, s->w, s->h);
-			SDL_RectToFRect(&position_on_atlas, &rg.position_on_atlas);
+			SDL_FRect position_on_atlas(dst.x, dst.y, s->w, s->h);
+			rg.position_on_atlas = position_on_atlas;
 			debug(char(g.unicode) << " is on " << atlas_tag << " at position " << int(position_on_atlas.x) << int(position_on_atlas.y) << int(position_on_atlas.w) << int(position_on_atlas.h) << '\n');
 			
 			rg.atlas_tag = atlas_tag;

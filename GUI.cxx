@@ -48,11 +48,11 @@ resize_element(UI_element &obj, gui_core& gui, assets& assets){
 
 void
 render_glyph_text(SDL_Renderer* renderer, assets& assets, relative_text text, int scroll){
-
+	//TODO: Add kerning
 	std::vector<std::vector<glyph>> words;
 	std::vector<glyph> word;
-	float ascent = 0;
-	float descent = 0;
+	int ascent = 0;
+	int descent = 0;
 	int default_space = 0;
 	for(glyph& g : text.text){
 
@@ -78,9 +78,10 @@ render_glyph_text(SDL_Renderer* renderer, assets& assets, relative_text text, in
 		words.push_back(word);
 	}
 
-	float font_height = (ascent - descent) * 1.4;
-	float max_line_size = text.canvas.SDL_rect.w * 0.9;//ensuring space for spacing
-	float line_size = 0;
+	int font_height = ascent - descent;
+	int line_spacing = font_height * 0.3;
+	int max_line_size = text.canvas.SDL_rect.w * 0.9;
+	int line_size = 0;
 	int word_count = 0;
 	int line = 1;
 	int pen_x;
@@ -90,32 +91,33 @@ render_glyph_text(SDL_Renderer* renderer, assets& assets, relative_text text, in
 		auto& glyph_data = assets.glyphs.at(glyph);
 		SDL_Texture* atlas = assets.textures.at(glyph_data.atlas_tag);
 		SDL_FRect& srcrect = glyph_data.position_on_atlas;
-		SDL_FRect dstrect(pen_x + glyph_data.min_x, pen_y,
+		SDL_FRect dstrect(pen_x + glyph_data.min_x, pen_y - glyph_data.ascent,
 			srcrect.w, srcrect.h);
 		SDL_RenderTexture(renderer, atlas, &srcrect, &dstrect);
 		pen_x += glyph_data.advance;
 	};
 
 	for(int w = 0; w < words.size(); ++w){
-		float word_size = 0;
+		int word_size = 0;
 		for(auto& glyph : words.at(w)){
-			debug(char(glyph.unicode));
 			word_size += assets.glyphs.at(glyph).advance;
 		}
-		debug('\n');
 
+		//TODO: Force line break if glyph equals newline
 		if(line_size + word_size <= max_line_size){
 
 			line_size += word_size;
 			word_count += 1;
-			debug("Word count: " << word_count << '\n');
 
 		}else{
 
-			debug("Rendering line.\n\n");
-			float spacing = (text.canvas.SDL_rect.w - line_size) / (word_count - 1);
+			int spacing = 0;
+			if(word_count > 1){
+				spacing = (text.canvas.SDL_rect.w - line_size) / (word_count - 1);
+			}
+
 			pen_x = text.canvas.SDL_rect.x;
-			pen_y = (text.canvas.SDL_rect.y + (font_height * line) + descent) - scroll;
+			pen_y = text.canvas.SDL_rect.y + line * (ascent + line_spacing) - scroll;
 
 			if(word_count == 0){
 				//TODO: Write some sort of word splitter
@@ -137,9 +139,9 @@ render_glyph_text(SDL_Renderer* renderer, assets& assets, relative_text text, in
 			}
 		}
 	}
-	debug("Rendering final line.\n\n");
+
 	pen_x = text.canvas.SDL_rect.x;
-	pen_y = (text.canvas.SDL_rect.y + (font_height * line) + descent) - scroll;
+	pen_y = text.canvas.SDL_rect.y + line * (ascent + line_spacing) - scroll;
 	while(word_count > 0){
 		for(auto& glyph : words.at(words.size() - word_count)){
 			if(!assets.glyphs.contains(glyph)){
@@ -192,12 +194,6 @@ render_element(const UI_element& obj, gui_core& gui, assets& assets){
 			render_debug_hitbox(gui, mask, 255, 255, 255, 255);
 
 			render_glyph_text(gui.renderer, assets, t, t.scroll_y + obj.scroll_y);
-
-			/*
-			for(auto& glyph : t.text){
-				debug(char(glyph.unicode));
-			}
-			debug('\n');*/
 		}
 	}
 	SDL_SetRenderClipRect(gui.renderer, NULL);

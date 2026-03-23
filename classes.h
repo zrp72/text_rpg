@@ -315,8 +315,8 @@ class rasterized_glyph_info {
 	int max_x;
 	int min_y;
 	int max_y;
-	float ascent;
-	float descent;
+	int ascent;
+	int descent;
 	int advance;
 
 	rasterized_glyph_info(){}
