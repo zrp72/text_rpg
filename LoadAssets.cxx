@@ -44,7 +44,7 @@ assets::rasterize_glyph_atlas(std::vector<glyph>& passed_glyphs, gui_core& gui){
 
 	int atlas_iteration = 1;
 	std::string atlas_tag = "glyph_atlas" + std::to_string(atlas_iteration);
-	SDL_Surface* atlas = SDL_CreateSurface(1024, 1024, SDL_PIXELFORMAT_ARGB8888);
+	SDL_Surface* atlas = SDL_CreateSurface(1024, 1024, SDL_PIXELFORMAT_RGBA8888);
 	SDL_SetSurfaceBlendMode(atlas, SDL_BLENDMODE_BLEND);
 
 	int highest_font_height = 0;
@@ -56,7 +56,9 @@ assets::rasterize_glyph_atlas(std::vector<glyph>& passed_glyphs, gui_core& gui){
 		if(g.style.bold && !g.style.italic){TTF_SetFontStyle(font, TTF_STYLE_BOLD);}
 		if(!g.style.bold && g.style.italic){TTF_SetFontStyle(font, TTF_STYLE_ITALIC);}
 		if(g.style.bold && g.style.italic){TTF_SetFontStyle(font, TTF_STYLE_BOLD | TTF_STYLE_ITALIC);}
-		
+
+		TTF_SetFontSize(font, g.style.size);
+
 		highest_font_height = std::max(highest_font_height, TTF_GetFontHeight(font));
 
 		if(!TTF_FontHasGlyph(font, g.unicode)){
@@ -77,8 +79,7 @@ assets::rasterize_glyph_atlas(std::vector<glyph>& passed_glyphs, gui_core& gui){
 			rg.descent = TTF_GetFontDescent(font);
 
 			SDL_Surface* s = TTF_RenderGlyph_Blended(font, g.unicode, g.style.color);
-			dst.w = s->w;
-			dst.h = s->h;
+			SDL_SetSurfaceBlendMode(s, SDL_BLENDMODE_BLEND);
 
 			if(dst.x + s->w > atlas->w){
 				dst.y += highest_font_height;
