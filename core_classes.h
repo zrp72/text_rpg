@@ -9,6 +9,8 @@
 #include <functional>
 #include <list>
 
+#include "glyphtext.h"
+
 class item {
 	public:
 	std::string ID;
@@ -80,37 +82,6 @@ class styling {
 
 	void add_marker(std::string, std::string);
 	void remove_marker(std::string);
-};
-
-class glyph_styling {
-	public:
-	std::string font = "roboto_light";
-	SDL_Color color = {255, 255, 255, 255};
-	bool bold = false;
-	bool italic = false;
-	int size = 24;
-
-	glyph_styling(){}
-
-	bool operator==(const glyph_styling&);
-
-};
-
-class glyph {
-	public:
-	uint32_t unicode;
-	glyph_styling style;
-
-	glyph(){}
-	glyph(uint32_t u, glyph_styling s) : unicode(u), style(s){}
-
-	bool operator==(const glyph&);
-
-	bool operator<(const glyph&)const;
-};
-
-class glyph_hash {
-	size_t operator()(const glyph&);
 };
 
 class story_variables {
@@ -306,28 +277,12 @@ class UI_element {
 	void determine_area();
 };
 
-class rasterized_glyph_info {
-	public:
-	std::string atlas_tag;
-	SDL_FRect position_on_atlas;
-
-	int min_x;
-	int max_x;
-	int min_y;
-	int max_y;
-	int ascent;
-	int descent;
-	int advance;
-
-	rasterized_glyph_info(){}
-};
-
 class assets {
 	public:
 	//Includes glyph atlas textures
 	std::map<std::string, SDL_Texture*> textures;
 	std::map<std::string, TTF_Font*> fonts;
-	std::map<glyph, rasterized_glyph_info> glyphs;
+	std::map<glyph, rasterized_glyph> glyphs;
 	std::map<std::string, UI_element> elements;
 
 	assets(gui_core&);

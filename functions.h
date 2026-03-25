@@ -1,6 +1,6 @@
 #ifndef functions_header
 #define functions_header 1
-#include "classes.h"
+#include "core_classes.h"
 #include <string>
 
 //game_data load_game();
