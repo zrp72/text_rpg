@@ -1,190 +1,114 @@
 #include "glyphtext.h"
 #define debug(x) std::cout << x
 
-class glyph_styling {
-	public:
-	//FONT SHOULD BE THE FILENAME(can exclude the .ttf)
-	std::string font;
-	SDL_Color color = {255, 255, 255, 255};
-	bool bold = false;
-	bool italic = false;
-	int size = 24;
+bool glyph::operator==(const glyph& other){
+	if(unicode != other.unicode){return false;}
+	if(style.font != other.style.font){return false;}
+	if(style.color.r != other.style.color.r){return false;}
+	if(style.color.g != other.style.color.g){return false;}
+	if(style.color.b != other.style.color.b){return false;}
+	if(style.color.a != other.style.color.a){return false;}
+	if(style.bold != other.style.bold){return false;}
+	if(style.italic != other.style.italic){return false;}
+	if(style.size != other.style.size){return false;}
+	return true;
+}
 
-	glyph_styling(){}
-};
+bool glyph::operator<(const glyph& other){
+	if(unicode < other.unicode){return true;}
+	if(style.color.r < other.style.color.r){return true;}
+	if(style.color.g < other.style.color.g){return true;}
+	if(style.color.b < other.style.color.b){return true;}
+	if(style.color.a < other.style.color.a){return true;}
+	if(style.bold != other.style.bold){return true;}
+	if(style.italic != other.style.italic){return true;}
+	if(style.size < other.style.size){return true;}
+	return false;
+}
 
-class glyph {
-	public:
-	uint32_t unicode;
-	glyph_styling style;
+size_t glyph_hash::operator()(const glyph& glyph){
+	//TODO: Learn how to write a good hash function
+	size_t u = glyph.unicode;
+	size_t r = glyph.style.color.r << 1;
+	size_t g = glyph.style.color.g * 5;
+	size_t b = glyph.style.color.b / 30;
+	size_t a = glyph.style.color.a + 44;
+	return u + r + g + b + a;
+}
 
-	glyph(){}
-	glyph(uint32_t u, glyph_styling s)
-	: unicode(u), style(s){}
+void glyphtext::word::clear(){
+	glyphs.clear();
+	length = 0;
+}
 
-	bool operator==(const glyph& other){
-		if(unicode != other.unicode){return false;}
-		if(style.font != other.style.font){return false;}
-		if(style.color.r != other.style.color.r){return false;}
-		if(style.color.g != other.style.color.g){return false;}
-		if(style.color.b != other.style.color.b){return false;}
-		if(style.color.a != other.style.color.a){return false;}
-		if(style.bold != other.style.bold){return false;}
-		if(style.italic != other.style.italic){return false;}
-		if(style.size != other.style.size){return false;}
-		return true;
-	}
+void glyphtext::line::clear(){
+	glyphs.clear();
+	length = 0;
+	spaces = -1;
+}
 
-	bool operator<(const glyph& other){
-		if(unicode < other.unicode){return true;}
-		if(style.color.r < other.style.color.r){return true;}
-		if(style.color.g < other.style.color.g){return true;}
-		if(style.color.b < other.style.color.b){return true;}
-		if(style.color.a < other.style.color.a){return true;}
-		if(style.bold != other.style.bold){return true;}
-		if(style.italic != other.style.italic){return true;}
-		if(style.size < other.style.size){return true;}
-		return false;
-	}
-};
-
-class glyph_hash {
-	public:
-	size_t operator()(const glyph& glyph){
-		//TODO: Learn how to write a good hash function
-		size_t u = glyph.unicode;
-		size_t r = glyph.style.color.r << 1;
-		size_t g = glyph.style.color.g * 5;
-		size_t b = glyph.style.color.b / 30;
-		size_t a = glyph.style.color.a + 44;
-		return u + r + g + b + a;
-	}
-};
-
-class glyphtext {
-	public:
-	//Word and line are mainly used for refreshing layout
-	class word {
-		public:
-		std::vector<glyph> glyphs;
-		int length = 0;
-
-		word(){}
-		void clear(){
-			glyphs.clear();
-			length = 0;
+//Takes width and height to create a vector<vector<bool>>(a grid of pixels either available or used)
+packing_grid::packing_grid(size_t w, size_t h):width(w), height(h){
+	for(int x = 0; x < width; ++x){
+		std::vector<bool> column;
+		for(int y = 0; y < height; ++y){
+			column.push_back(false);
 		}
-	};
-	class line {
-		public:
-		std::vector<glyph> glyphs;
-		//LENGTH IS ONLY THE LENGTH OF COMBINED GLYPHS,
-		//IT DOES NOT INCLUDE THE LENGTH OF WHITESPACE.
-		int length = 0;
-		int spaces = -1;
-		
-		line(){}
-		void clear(){
-			glyphs.clear();
-			length = 0;
-			spaces = -1;
-		}
-	};
-
-	std::vector<glyph> glyphs;
-	std::vector<SDL_FRect> layout;
-	int height;
-
-	glyphtext(){}
-	void refresh_layout(std::unordered_map<glyph, rasterized_glyph>&, int, int);
-};
-
-class rasterized_glyph {
-	public:
-	std::string atlas_tag;
-	SDL_FRect position_on_atlas;
-	uint32_t unicode;
-	int min_x;
-	int max_x;
-	int min_y;
-	int max_y;
-	int advance;
-	int descent;
-	int ascent;
-
-	rasterized_glyph(){}
-};
-
-class packing_grid {
-	public:
-	size_t width = 0;
-	size_t height = 0;
-	std::vector<std::vector<bool>> pixels;
-
-	//Takes width and height to create a vector<vector<bool>>(a grid of pixels either available or used)
-	packing_grid(size_t w, size_t h):width(w), height(h){
-		for(int x = 0; x < width; ++x){
-			std::vector<bool> column;
-			for(int y = 0; y < height; ++y){
-				column.push_back(false);
-			}
-			pixels.push_back(column);
-		}
+		pixels.push_back(column);
 	}
+}
 
-	//Returns an xy pixel location for where the object can fit from its top left corner.
-	//Padding should always be an even number.
-	//If no position is found, the returned point will be -1, -1
-	std::pair<int, int>
-	find_space(int w, int h, int padding){
-		for(int x = 0; x < width; ++x){
-			for(int y = 0; y < height; ++y){
-				if(pixels.at(x).at(y)){
-					continue;
-				}else{
-					bool viable = true;
-					for(int px = 0; px < w + padding && x + px < width; ++px){
-						if(x + px >= width){
+//Returns an xy pixel location for where the object can fit from its top left corner.
+//Padding should always be an even number.
+//If no position is found, the returned point will be -1, -1
+std::pair<int, int> packing_grid::find_space(int w, int h, int padding){
+	for(int x = 0; x < width; ++x){
+		for(int y = 0; y < height; ++y){
+			if(pixels.at(x).at(y)){
+				continue;
+			}else{
+				bool viable = true;
+				for(int px = 0; px < w + padding && x + px < width; ++px){
+					if(x + px >= width){
+						viable = false;
+						break;
+					}
+					for(int py = 0; py < h + padding; ++py){
+						if(pixels.at(x + px).at(y + py)){
 							viable = false;
 							break;
 						}
-						for(int py = 0; py < h + padding; ++py){
-							if(pixels.at(x + px).at(y + py)){
-								viable = false;
-								break;
-							}
-							if(y + py >= height){
-								viable = false;
-								break;
-							}
-						}
-						if(!viable){
+						if(y + py >= height){
+							viable = false;
 							break;
 						}
 					}
-					if(viable){
-						return {x + (padding / 2), y + (padding / 2)};
+					if(!viable){
+						break;
 					}
+				}
+				if(viable){
+					return {x + (padding / 2), y + (padding / 2)};
 				}
 			}
 		}
-		return {-1, -1};
 	}
+	return {-1, -1};
+}
 
-	//Takes the x, y, width, and height of the space being used.
-	//Will return false if given area goes beyond pixel grid bounds.
-	//Will print a debug if it attempts to use a pixel already used.
-	bool use_pixels(int x, int y, int w, int h){
-		for(int px = 0; px < w; ++px){
-			if(x + px >= width){return false;}
-			for(int py = 0; py < h; ++py){
-				if(y + py >= height){return false;}
-				pixels.at(x + px).at(y + py) = true;
-			}
+//Takes the x, y, width, and height of the space being used.
+//Will return false if given area goes beyond pixel grid bounds.
+//Will print a debug if it attempts to use a pixel already used.
+bool packing_grid::use_pixels(int x, int y, int w, int h){
+	for(int px = 0; px < w; ++px){
+		if(x + px >= width){return false;}
+		for(int py = 0; py < h; ++py){
+			if(y + py >= height){return false;}
+			pixels.at(x + px).at(y + py) = true;
 		}
-		return true;
 	}
-};
+	return true;
+}
 
 //The passed directory is where all ttf font files should reside.
 //This function assumes that glyph font names will match their filenames.
@@ -439,6 +363,8 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph>& ras_info,
 		pen_y += font_height * line_padding;
 		pen_x = 0;
 	}
+
+	this->height = pen_y - descent;
 }
 
 void
