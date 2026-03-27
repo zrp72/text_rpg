@@ -24,7 +24,7 @@ UI_element::determine_area(){
 		resize(t.relative_x, t.relative_y, t.relative_w, t.relative_h);
 	}
 	for(auto &txt : this->text){
-		auto& c = txt.canvas;
+		auto& c = txt.draw_pos;
 		auto& m = txt.mask;
 		resize(c.relative_x, c.relative_y, c.relative_w, m.relative_h);
 	}
@@ -43,7 +43,7 @@ create_story_display(gui_core& gui, assets& assets, game_data& data){
 		relative_rect(.15, .1, .7, .5),
 		relative_rect(.15, .1, .7)
 	));
-	for(auto& g : element.text[0].text){
+	for(auto& g : element.text[0].text.glyphs){
 		debug(char(g.unicode));
 	}
 	debug('\n');

@@ -19,9 +19,9 @@ int main(int argc, char** argv) {
 		loaded_data.parse_story_file(files);
 
 		gui_core gui;
-
 		assets assets(gui);
-		assets.rasterize_glyph_atlas(loaded_data.story.used_glyphs, gui);
+		assets.glyphs = rasterize_glyph_atlas(std::filesystem::path("ttf_files"), 
+			loaded_data.story.used_glyphs, gui.renderer, assets.textures, "glyph_atlas");
 
 		if(create_UI_elements(gui, assets, loaded_data)){
 			debug("Failed to create UI elements");

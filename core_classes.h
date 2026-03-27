@@ -208,7 +208,7 @@ class gui_core {
 	}
 
 	~gui_core(){
-		TTF_DestroySurfaceTextEngine(text_engine);
+		TTF_DestroyRendererTextEngine(text_engine);
 		SDL_DestroyRenderer(renderer);
 		SDL_DestroyWindow(window);
 		TTF_Quit();
@@ -233,7 +233,9 @@ class relative_rect {
 	relative_rect(){}
 
 	relative_rect(float x, float y, float w)
-	: relative_x(x), relative_y(y), relative_w(w){}
+	: relative_x(x), relative_y(y), relative_w(w){
+		relative_h = 0;
+	}
 
 	relative_rect(float x, float y, float w, float h)
 	: relative_x(x), relative_y(y), relative_w(w), relative_h(h){}
@@ -241,14 +243,14 @@ class relative_rect {
 
 class relative_text {
 	public:
-	std::vector<glyph> text;
+	glyphtext text;
+	relative_rect draw_pos;
 	relative_rect mask;
-	relative_rect canvas;
 	int scroll_y = 0;
 
 	relative_text(){};
-	relative_text(std::vector<glyph> t, relative_rect m, relative_rect c)
-	: text(t), mask(m), canvas(c){}
+	relative_text(glyphtext t, relative_rect m, relative_rect d)
+	: text(t), mask(m), draw_pos(d){}
 };
 
 class relative_texture {
@@ -280,23 +282,17 @@ class UI_element {
 class assets {
 	public:
 	//Includes glyph atlas textures
-	std::map<std::string, SDL_Texture*> textures;
-	std::map<std::string, TTF_Font*> fonts;
-	std::map<glyph, rasterized_glyph> glyphs;
+	std::unordered_map<std::string, SDL_Texture*> textures;
+	std::unordered_map<glyph, rasterized_glyph, glyph_hash> glyphs;
 	std::map<std::string, UI_element> elements;
 
 	assets(gui_core&);
 
 	~assets(){
-		for(auto& [tag, f] : fonts){
-			TTF_CloseFont(f);
-		}
 		for(auto& [tag, t] : textures){
 			SDL_DestroyTexture(t);
 		}
 	}
-
-	void rasterize_glyph_atlas(std::vector<glyph>&, gui_core&);
 
 	void add_element(std::string, UI_element&, gui_core&);
 

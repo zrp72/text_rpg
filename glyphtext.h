@@ -18,7 +18,7 @@
 class glyph_styling {
     public:
     //FONT SHOULD BE THE FILENAME(can exclude the .ttf)
-	std::string font;
+	std::string font = "roboto_light";
 	SDL_Color color = {255, 255, 255, 255};
 	bool bold = false;
 	bool italic = false;
@@ -36,45 +36,14 @@ class glyph {
 	glyph(uint32_t u, glyph_styling s)
 	: unicode(u), style(s){}
 
-	bool operator==(const glyph&);
+	bool operator==(const glyph&) const;
 
-	bool operator<(const glyph&);
+	bool operator<(const glyph&) const;
 };
 
 class glyph_hash {
 	public:
-	size_t operator()(const glyph&);
-};
-
-class glyphtext {
-	public:
-	//Word and line are mainly used for refreshing layout
-	class word {
-		public:
-		std::vector<glyph> glyphs;
-		int length = 0;
-
-		word(){}
-		void clear();
-	};
-	class line {
-		public:
-		std::vector<glyph> glyphs;
-		//LENGTH IS ONLY THE LENGTH OF COMBINED GLYPHS,
-		//IT DOES NOT INCLUDE THE LENGTH OF WHITESPACE.
-		int length = 0;
-		int spaces = -1;
-		
-		line(){}
-		void clear();
-	};
-
-	std::vector<glyph> glyphs;
-	std::vector<SDL_FRect> layout;
-	int height;
-
-	glyphtext(){}
-	void refresh_layout(std::unordered_map<glyph, rasterized_glyph>&, int, int);
+	size_t operator()(const glyph&) const;
 };
 
 class rasterized_glyph {
@@ -91,6 +60,36 @@ class rasterized_glyph {
 	int ascent;
 
 	rasterized_glyph(){}
+};
+
+class glyphtext {
+	public:
+	//Word and line are mainly used for refreshing layout
+	class word {
+		public:
+		std::vector<glyph> glyphs;
+		int length = 0;
+
+		word(){}
+		void clear();
+	};
+	class line {
+		public:
+		std::vector<word> words;
+		//LENGTH DOES NOT INCLUDE THE LENGTH OF WHITESPACE.
+		int length = 0;
+		
+		line(){}
+		void clear();
+	};
+
+	std::vector<glyph> glyphs;
+	std::vector<SDL_FRect> layout;
+	int height = 0;
+
+	glyphtext(){}
+    glyphtext(std::vector<glyph> g):glyphs(g){}
+	void refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash>&, int, int);
 };
 
 class packing_grid {
@@ -115,10 +114,10 @@ class packing_grid {
 
 std::unordered_map<glyph, rasterized_glyph, glyph_hash>
 rasterize_glyph_atlas(std::filesystem::path, std::vector<glyph>&, 
-    std::vector<SDL_Surface*>, std::string);
+    SDL_Renderer*, std::unordered_map<std::string, SDL_Texture*>&, std::string);
 
 void
-render_glyphtext(SDL_Renderer*, std::unordered_map<std::string, SDL_Texture*>, 
-	glyphtext&, std::unordered_map<glyph, rasterized_glyph>&);
+render_glyphtext(SDL_Renderer*, std::unordered_map<std::string, SDL_Texture*>&, 
+	glyphtext&, std::unordered_map<glyph, rasterized_glyph, glyph_hash>&, int& x, int& y);
 
 #endif

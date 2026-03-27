@@ -15,7 +15,7 @@ std::string
 create_substring(std::string& source, int& c, std::string ends, bool lower){
 	std::string string;
 
-	size_t start = source.find_first_not_of(' ', c);
+	size_t start = source.find_first_not_of(" \n\t\v\f\r", c);
 	if(start == std::string::npos){
 		c = source.length();
 		return string;
@@ -28,7 +28,7 @@ create_substring(std::string& source, int& c, std::string ends, bool lower){
 
 	}else{
 
-		size_t trimmed_end = source.find_last_not_of(" \n\t\v\r\f", end - 1);
+		size_t trimmed_end = source.find_last_not_of(" \n\t\v\f\r", end - 1);
 		string = source.substr(start, trimmed_end - start + 1);
 		c = end + 1;
 
@@ -114,21 +114,6 @@ parse_story_variables(std::string& story, int& c, std::string delimiters, std::s
 }
 
 void
-read_nexus_exits(std::string& story, int& c, nexus::exit_group& exit_group){
-
-	while(c < story.length()){
-		exit_group.exits.push_back(create_substring(story, c, "\n]", true));
-
-		if(story[c - 1] == '\n' && check_double_newline(story, c)){
-			return;
-		}else if(move_iterator_past_whitespace(story, c); story[c] == ']'){
-			c += 1;
-			return;
-		}
-	}
-}
-
-void
 styling::add_marker(std::string marker, std::string meaning){
 	std::list<std::string>& bm = this->bold_markers;
 	std::list<std::string>& im = this->italic_markers;
@@ -196,7 +181,7 @@ game_data::parse_story_file(files& files){
 		}
 		//Just visually pleasing to be able to use underscores for seperation.
 		case '_': {
-			int non_underscore = story.find_first_not_of('_', c);
+			int non_underscore = story.find_first_not_of(" _", c);
 			int newline = story.find('\n', c);
 			if(newline == non_underscore){
 				c = newline;
@@ -207,7 +192,7 @@ game_data::parse_story_file(files& files){
 		}
 		//For inline commenting
 		case '/': {
-			c = story.find('\n', c);
+			c = story.find('\n', c) + 1;
 			continue;
 		}
 		case '\n': {
@@ -245,6 +230,7 @@ game_data::parse_story_file(files& files){
 			c += 1;
 			std::string visual = create_substring(story, c, ":", true);
 			std::string filename = create_substring(story, c, "\n", true);
+			//TODO: Surely there is a better way to write this
 			if(visual == "font"){
 				glyph_style.font = filename;
 			}else if(visual == "option_border"){
@@ -267,27 +253,47 @@ game_data::parse_story_file(files& files){
 		case '[': {
 			c += 1;
 			std::string tag = create_substring(story, c, ":", true);
-			int vector_pos = this->story.nexuses.size();
 			if(this->story.tag_map.contains(tag)){
 				debug("Nexus already exists:" << tag << '\n');
 			}else{
+				int vector_pos = this->story.nexuses.size();
 				this->story.tag_map.emplace(tag, std::pair('n', vector_pos));
 
 				nexus nexus;
 
-				while(c < story.length() && story[c - 1] != ']'){
+				while(c < story.length()){
 					nexus::exit_group exit_group;
 
-					auto conditions = parse_story_variables(story, c, ",:]", ":]");
-					exit_group.conditions = conditions;
+					exit_group.conditions = parse_story_variables(story, c, ",:]", ":]");
 
 					if(story[c - 1] == ']'){
 						debug("Nexus closed with empty exit group.\n");
 						break;
+					}else if(move_iterator_past_whitespace(story, c); story.at(c) == ']'){
+						debug("Nexus closed with empty exit group.\n");
+						c += 1;
+						break;
 					}
 
-					read_nexus_exits(story, c, exit_group);
+					while(c < story.length()){
+						exit_group.exits.push_back(create_substring(story, c, "\n]", true));
+
+						if(story[c - 1] == '\n' && check_double_newline(story, c)){
+							break;
+						}else if(story[c - 1] == ']'){
+							break;
+						}else{
+							move_iterator_past_whitespace(story, c);
+							if(story.at(c) == ']'){
+								c += 1;
+								break;
+							}
+						}
+					}
+
 					nexus.exits.push_back(exit_group);
+
+					if(story.at(c - 1) == ']'){break;}
 				}
 
 				this->story.nexuses.push_back(nexus);
@@ -311,7 +317,7 @@ game_data::parse_story_file(files& files){
 
 			}else{
 
-				int pos = this->story.tag_map[tag].second;
+				int pos = this->story.tag_map.at(tag).second;
 
 				std::string dstlabel = create_substring(story, c, "}", true);
 				option option(dstlabel, option_textures);
@@ -320,9 +326,7 @@ game_data::parse_story_file(files& files){
 					option.reveal_conditions = option_conditions;
 				}
 
-				debug(__LINE__ << '\n');
-				move_iterator_past_whitespace(story, c);
-				debug(__LINE__ << '\n');
+				move_iterator_past_whitespace(story, c);\
 				if(story[c] == '('){
 					c += 1;
 					option.changes = parse_story_variables(story, c, ",)", ")");
@@ -349,7 +353,7 @@ game_data::parse_story_file(files& files){
 					option.prompt.pop_back();
 				}
 
-				this->story.paragraphs[pos].options.push_back(option);
+				this->story.paragraphs.at(pos).options.push_back(option);
 			}
 			continue;
 		}
@@ -357,7 +361,7 @@ game_data::parse_story_file(files& files){
 			std::string tag = std::string(create_substring(story, c, ":", true));
 
 			if(this->story.tag_map.contains(tag)){
-				if(this->story.tag_map[tag].first == 'n'){
+				if(this->story.tag_map.at(tag).first == 'n'){
 					debug("Paragraph tag already exists as a nexus: " << tag << '\n');
 				}else{
 					debug("Paragraph tag " << tag << " already exists.\n");

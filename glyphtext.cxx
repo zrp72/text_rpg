@@ -1,7 +1,7 @@
 #include "glyphtext.h"
 #define debug(x) std::cout << x
 
-bool glyph::operator==(const glyph& other){
+bool glyph::operator==(const glyph& other) const{
 	if(unicode != other.unicode){return false;}
 	if(style.font != other.style.font){return false;}
 	if(style.color.r != other.style.color.r){return false;}
@@ -14,7 +14,7 @@ bool glyph::operator==(const glyph& other){
 	return true;
 }
 
-bool glyph::operator<(const glyph& other){
+bool glyph::operator<(const glyph& other) const{
 	if(unicode < other.unicode){return true;}
 	if(style.color.r < other.style.color.r){return true;}
 	if(style.color.g < other.style.color.g){return true;}
@@ -26,7 +26,7 @@ bool glyph::operator<(const glyph& other){
 	return false;
 }
 
-size_t glyph_hash::operator()(const glyph& glyph){
+size_t glyph_hash::operator()(const glyph& glyph) const{
 	//TODO: Learn how to write a good hash function
 	size_t u = glyph.unicode;
 	size_t r = glyph.style.color.r << 1;
@@ -42,9 +42,8 @@ void glyphtext::word::clear(){
 }
 
 void glyphtext::line::clear(){
-	glyphs.clear();
+	words.clear();
 	length = 0;
-	spaces = -1;
 }
 
 //Takes width and height to create a vector<vector<bool>>(a grid of pixels either available or used)
@@ -113,23 +112,30 @@ bool packing_grid::use_pixels(int x, int y, int w, int h){
 //The passed directory is where all ttf font files should reside.
 //This function assumes that glyph font names will match their filenames.
 //
-//Takes a vector of every glyph to rasterize and a
-//vector of SDL_Surface(s) to add the atlas(s) to.
+//Takes a vector of every glyph to rasterize and a map to store atlas textures.
 //
-//Atlas naming defines what the rasterized glyphs will store their atlas tags as.
+//Atlas name defines what the rasterized glyphs will store their atlas tags as.
 //Given atlas name will be followed by the number related to its iteration, starting at 1.
 //
 //Return an unordered map of glyphs to their rasterized positions and data.
 std::unordered_map<glyph, rasterized_glyph, glyph_hash>
-rasterize_glyph_atlas(std::filesystem::path directory, std::vector<glyph>& glyphs, std::vector<SDL_Surface*> container, std::string atlas_naming){
+rasterize_glyph_atlas(std::filesystem::path directory, std::vector<glyph>& glyphs, 
+	SDL_Renderer* renderer, std::unordered_map<std::string, SDL_Texture*>& container, 
+	std::string atlas_name){
 
 	std::filesystem::path original_directory = SDL_GetBasePath();
+	if(!std::filesystem::exists(directory)){
+		debug("Passed directory does not exist: " << directory << '\n');
+		return {};
+	}
 	std::filesystem::current_path(directory);
+	debug("Moved to directory: " << std::filesystem::current_path() << '\n');
+
 	std::unordered_map<glyph, rasterized_glyph, glyph_hash> rasterized_glyphs;
 	std::unordered_map<std::string, TTF_Font*> cached_fonts;
 
 	int atlas_iteration = 1;
-	std::string atlas_tag = atlas_naming + std::to_string(atlas_iteration);
+	std::string atlas_tag = atlas_name + std::to_string(atlas_iteration);
 
 	//NOTE: If atlas size is ever changed, 1024 is also used later in this function.
 	//TODO: Add atlas width and size to function params.
@@ -142,9 +148,15 @@ rasterize_glyph_atlas(std::filesystem::path directory, std::vector<glyph>& glyph
 			if(!path.has_extension()){
 				path += ".ttf";
 			}else if(path.extension() != ".ttf"){
-				debug("Attempted to rasterize glyph with unknown font file type(not .ttf):" << path << '\n');
+				debug("Attempted to rasterize glyph with unknown font file type(not .ttf): " << path << '\n');
 				return rasterized_glyphs;
 			}
+			
+			if(!std::filesystem::exists(path)){
+				debug("Cannot find font file \"" << glyph.style.font << "\".\n");
+				continue;
+			}
+
 			TTF_Font* font = TTF_OpenFont(path.string().data(), 24);
 			cached_fonts.emplace(glyph.style.font, font);
 		}
@@ -154,8 +166,17 @@ rasterize_glyph_atlas(std::filesystem::path directory, std::vector<glyph>& glyph
 		if(glyph.style.italic){TTF_SetFontStyle(font, TTF_STYLE_ITALIC);}
 		if(glyph.style.bold && glyph.style.italic){TTF_SetFontStyle(font, TTF_STYLE_BOLD | TTF_STYLE_ITALIC);}
 		TTF_SetFontSize(font, glyph.style.size);
+		if(!TTF_FontHasGlyph(font, glyph.unicode)){
+			debug("Font \"" << glyph.style.font << "\" does not contain glyph: " << char(glyph.unicode) << '\n');
+			continue;
+		}
 		SDL_Surface* g = TTF_RenderGlyph_Blended(font, glyph.unicode, glyph.style.color);
 		TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
+
+		if(g == nullptr){
+			debug("Failed to load glyph surface.\n");
+			continue;
+		}
 
 		rasterized_glyph rg;
 		TTF_GetGlyphMetrics(font, glyph.unicode,
@@ -171,30 +192,34 @@ rasterize_glyph_atlas(std::filesystem::path directory, std::vector<glyph>& glyph
 		auto dst = packing_container.find_space(g->w, g->h, 2);
 		if(dst.first == -1){
 
-			container.push_back(atlas);
-			atlas = SDL_CreateSurface(1024, 1024, SDL_PIXELFORMAT_RGBA8888);
+			SDL_Texture* a = SDL_CreateTextureFromSurface(renderer, atlas);
+			container.emplace(atlas_tag, a);
+			SDL_ClearSurface(atlas, 0, 0, 0, 0);
 			atlas_iteration += 1;
-			atlas_tag = atlas_naming + std::to_string(atlas_iteration);
+			atlas_tag = atlas_name + std::to_string(atlas_iteration);
 
 			packing_container = packing_grid(1024, 1024);
 			dst = packing_container.find_space(g->w, g->h, 2);
 			if(dst.first == -1){
 				debug("Glyph is larger than glyph atlas bounds.");
-				return rasterized_glyphs;
+				continue;
 			}
 		}
 		if(!packing_container.use_pixels(dst.first, dst.second, g->w, g->h)){
 			debug("Attempted to pack glyph outside pixel bounds.");
 		}
-		SDL_Rect dstrect(dst.first, dst.second, 0, 0);
+		SDL_Rect dstrect(dst.first, dst.second, g->w, g->h);
 		SDL_BlitSurface(g, NULL, atlas, &dstrect);
 
-		rg.position_on_atlas = SDL_FRect(dst.first, dst.second, g->w, g->h);
+		SDL_RectToFRect(&dstrect, &rg.position_on_atlas);
 		rg.atlas_tag = atlas_tag;
 		rg.unicode = glyph.unicode;
 
 		rasterized_glyphs.emplace(glyph, rg);
 	}
+	SDL_Texture* a = SDL_CreateTextureFromSurface(renderer, atlas);
+	container.emplace(atlas_tag, a);
+	SDL_DestroySurface(atlas);
 
 	for(std::pair<std::string, TTF_Font*> font : cached_fonts){
 		TTF_CloseFont(font.second);
@@ -214,7 +239,7 @@ rasterize_glyph_atlas(std::filesystem::path directory, std::vector<glyph>& glyph
 //GLYPHTEXT_ALIGN_RIGHT
 //GLYPHTEXT_ALIGN_JUSTIFY
 void
-glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph>& ras_info, int w, int alignment){
+glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash>& ras_info, int w, int alignment){
 	layout.clear();
 	int ascent = 0;
 	int descent = 0;
@@ -227,7 +252,7 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph>& ras_info,
 		ascent = std::max(ascent, ras_info.at(g).ascent);
 		descent = std::min(descent, ras_info.at(g).descent);
 
-		switch(ras_info.at(g).unicode){
+		switch(g.unicode){
 		case ' ':
 			default_space = std::max(default_space, ras_info.at(g).advance);
 			if(!word.glyphs.empty()){
@@ -254,49 +279,53 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph>& ras_info,
 
 	std::vector<glyphtext::line> lines;
 	glyphtext::line line;
-	//Moves the current line to lines before clearing current line.
+
+	//Pushes the current line to lines before clearing current line.
 	auto next_line = [&](){
 		lines.push_back(line);
 		line.clear();
 	};
 
 	for(auto& word : words){
-		if(line.length + word.length > w){
-			next_line();
-
+		int spaces = line.words.size() - 1;
 		//Ensuring enough room for spaces.
-		}else if(alignment == GLYPHTEXT_ALIGN_JUSTIFY){
-			//TODO: Handle undefined behavior when spaces is equal to -1 & 0
-			if((line.length + word.length) / line.spaces < default_space){
+		if(alignment == GLYPHTEXT_ALIGN_JUSTIFY){
+			if(spaces != -1 && (line.length + word.length) / (spaces + 1) < default_space){
 				next_line();
 			}
-		}else if(line.length + (default_space * (line.spaces + 1)) + word.length > w){
+		}else if(line.length + (default_space * (spaces + 1)) + word.length > w){
 			next_line();
 		}
 
 		//Handling words too long for a single line.
 		if(line.length + word.length > w){
+			glyphtext::word split_word;
 			for(auto& glyph : word.glyphs){
-				if(line.length + ras_info.at(glyph).advance > w){
+				if(split_word.length + ras_info.at(glyph).advance > w){
+					line.words.push_back(split_word);
+					line.length += split_word.length;
+					split_word.clear();
 					next_line();
 				}
-				line.glyphs.push_back(glyph);
-				line.length += ras_info.at(glyph).advance;
+				split_word.glyphs.push_back(glyph);
+				split_word.length += ras_info.at(glyph).advance;
 			}
-			line.spaces += 1;
+			line.words.push_back(split_word);
+			line.length += split_word.length;
 			continue;
 		}
 
 		if(word.glyphs.back().unicode == '\n'){
 			word.glyphs.pop_back();
-			line.glyphs.append_range(word.glyphs);
+			line.words.push_back(word);
 			next_line();
 		}else{
-			line.glyphs.append_range(word.glyphs);
+			line.words.push_back(word);
 			line.length += word.length;
 		}
+
 	}
-	if(!line.glyphs.empty()){
+	if(!line.words.empty()){
 		lines.push_back(line);
 		line.clear();
 	}
@@ -318,45 +347,44 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph>& ras_info,
 	};
 
 	for(auto& line : lines){
+		int spaces = line.words.size() - 1;
 		if(alignment == GLYPHTEXT_ALIGN_CENTER){
-			pen_x = (w - (line.length + (line.spaces * default_space))) / 2;
-			for(auto& glyph : line.glyphs){
-				if(glyph.unicode == ' '){
-					pen_x += default_space;
-				}else{
+			pen_x = (w - (line.length + (spaces * default_space))) / 2;
+			for(auto& word : line.words){
+				for(auto& glyph : word.glyphs){
 					append_layout(ras_info.at(glyph));
 				}
+				pen_x += default_space;
 			}
 		}else if(alignment == GLYPHTEXT_ALIGN_LEFT){
-			for(auto& glyph : line.glyphs){
-				if(glyph.unicode == ' '){
-					pen_x += default_space;
-				}else{
+			for(auto& word : line.words){
+				for(auto& glyph : word.glyphs){
 					append_layout(ras_info.at(glyph));
 				}
+				pen_x += default_space;
 			}
 		}else if(alignment == GLYPHTEXT_ALIGN_RIGHT){
-			pen_x = w - (line.length + (line.spaces * default_space));
-			for(auto& glyph : line.glyphs){
-				if(glyph.unicode == ' '){
-					pen_x += default_space;
-				}else{
+			pen_x = w - (line.length + (spaces * default_space));
+			for(auto& word : line.words){
+				for(auto& glyph : word.glyphs){
 					append_layout(ras_info.at(glyph));
 				}
+				pen_x += default_space;
 			}
 		}else if(alignment == GLYPHTEXT_ALIGN_JUSTIFY){
-			if(line.spaces == 0){
-				for(auto& glyph : line.glyphs){
-					append_layout(ras_info.at(glyph));
-				}
-			}else{
-				int spacing = (w - line.length) / line.spaces;
-				for(auto& glyph : line.glyphs){
-					if(glyph.unicode == ' '){
-						pen_x += spacing;
-					}else{
+			if(spaces == 0){
+				for(auto& word : line.words){
+					for(auto& glyph : word.glyphs){
 						append_layout(ras_info.at(glyph));
 					}
+				}
+			}else{
+				int spacing = (w - line.length) / spaces;
+				for(auto& word : line.words){
+					for(auto& glyph : word.glyphs){
+						append_layout(ras_info.at(glyph));
+					}
+					pen_x += spacing;
 				}
 			}
 		}
@@ -368,17 +396,22 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph>& ras_info,
 }
 
 void
-render_glyphtext(SDL_Renderer* renderer, std::unordered_map<std::string, SDL_Texture*> atlas_map, 
-	glyphtext& text, std::unordered_map<glyph, rasterized_glyph>& ras_info){
+render_glyphtext(SDL_Renderer* renderer, std::unordered_map<std::string, SDL_Texture*>& atlas_map, 
+	glyphtext& text, std::unordered_map<glyph, rasterized_glyph, glyph_hash>& ras_info, int& x, int& y){
 	int l = 0;
 	for(auto& glyph : text.glyphs){
-		if(std::isalpha(glyph.unicode)){
-			if(l < text.layout.size()){
-				SDL_RenderTexture(renderer, atlas_map.at(ras_info.at(glyph).atlas_tag), 
-				&ras_info.at(glyph).position_on_atlas, &text.layout.at(l));
-				l += 1;
+		if(!std::isspace(glyph.unicode)){
+			if(l >= text.layout.size()){
+				debug("Layout does not contain positions for remaining glyphs.\n");
+				break;
 			}else{
-				debug("Layout does not contain position for glyph.\n");
+				SDL_FRect dst = text.layout.at(l);
+				dst.x += x;
+				dst.y += y;
+				auto& glyph_data = ras_info.at(glyph);
+				SDL_RenderTexture(renderer, atlas_map.at(glyph_data.atlas_tag), 
+				&glyph_data.position_on_atlas, &dst);
+				l += 1;
 			}
 		}
 	}
