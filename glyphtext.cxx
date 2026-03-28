@@ -228,25 +228,13 @@ rasterize_glyph_atlas(std::filesystem::path directory, std::vector<glyph>& glyph
 	return rasterized_glyphs;
 }
 
-
-//Lays out glyphs with SDL_FRects's starting at their top-left corners.
-//First point may not always be 0, 0
-//Points are NOT given for whitespace(or atleast shouldnt be).
+//Seperates core glyphs by whitespace to create a vector of vectors of glyphs mainly used for layout purposes.
 //
-//Alignments are:
-//GLYPHTEXT_ALIGN_CENTER
-//GLYPHTEXT_ALIGN_LEFT
-//GLYPHTEXT_ALIGN_RIGHT
-//GLYPHTEXT_ALIGN_JUSTIFY
+//This function is automatically called by refresh layout if the amount of cached words is not equal to the amount of words in the core_glyphs. 
+//Automatic calling should not be relied upon if core_glyphs are added without whitespace seperation.
 void
-glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash>& ras_info, int w, int alignment){
-	layout.clear();
-	int ascent = 0;
-	int descent = 0;
-	int default_space = 0;
-
-	//TODO: Make sure every type of whitespace is handled
-	std::vector<glyphtext::word> words;
+glyphtext::refresh_words(std::unordered_map<glyph, rasterized_glyph, glyph_hash>& ras_info){
+//TODO: Make sure every type of whitespace is handled
 	glyphtext::word word;
 	for(auto& g : this->glyphs){
 		ascent = std::max(ascent, ras_info.at(g).ascent);
@@ -275,6 +263,36 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash
 	if(!word.glyphs.empty()){
 		words.push_back(word);
 		word.clear();
+	}
+}
+
+//Lays out glyphs with SDL_FRects's starting at their top-left corners.
+//First point may not always be 0, 0
+//Points are NOT given for whitespace(or atleast shouldnt be).
+//
+//Alignments are:
+//GLYPHTEXT_ALIGN_CENTER
+//GLYPHTEXT_ALIGN_LEFT
+//GLYPHTEXT_ALIGN_RIGHT
+//GLYPHTEXT_ALIGN_JUSTIFY
+void
+glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash>& ras_info, int w, int alignment){
+	layout.clear();
+
+	int word_count = 0;
+	bool previous_space = true;
+	for(auto& glyph : glyphs){
+		if(!isspace(glyph.unicode)){
+			if(previous_space){
+				word_count += 1;
+				previous_space = false;
+			}
+		}else{
+			previous_space = true;
+		}
+	}
+	if(word_count != this->words.size()){
+		refresh_words(ras_info);
 	}
 
 	std::vector<glyphtext::line> lines;
@@ -335,6 +353,7 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash
 	int pen_y = font_height + descent;
 	int pen_x = 0;
 	int line_padding = 1.4;
+	int lowest_point = 0;
 
 	auto append_layout = [&](rasterized_glyph& rg){
 		layout.push_back(
@@ -343,6 +362,7 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash
 			rg.position_on_atlas.w, 
 			rg.position_on_atlas.h)
 		);
+		lowest_point = std::max(lowest_point, pen_y - rg.descent);
 		pen_x += rg.advance;
 	};
 
@@ -403,27 +423,5 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash
 		pen_x = 0;
 	}
 
-	this->height = pen_y - descent;
-}
-
-void
-render_glyphtext(SDL_Renderer* renderer, std::unordered_map<std::string, SDL_Texture*>& atlas_map, 
-	glyphtext& text, std::unordered_map<glyph, rasterized_glyph, glyph_hash>& ras_info, int& x, int& y){
-	int l = 0;
-	for(auto& glyph : text.glyphs){
-		if(!std::isspace(glyph.unicode)){
-			if(l >= text.layout.size()){
-				debug("Layout does not contain positions for remaining glyphs.\n");
-				break;
-			}else{
-				SDL_FRect dst = text.layout.at(l);
-				dst.x += x;
-				dst.y += y;
-				auto& glyph_data = ras_info.at(glyph);
-				SDL_RenderTexture(renderer, atlas_map.at(glyph_data.atlas_tag), 
-				&glyph_data.position_on_atlas, &dst);
-				l += 1;
-			}
-		}
-	}
+	this->height = lowest_point;
 }

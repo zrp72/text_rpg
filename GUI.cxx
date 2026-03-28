@@ -90,8 +90,23 @@ render_element(UI_element& obj, gui_core& gui, assets& assets){
 
 			render_debug_hitbox(gui, mask, 255, 255, 255, 255);
 
-			render_glyphtext(gui.renderer, assets.textures, t.text, assets.glyphs, 
-				t.mask.SDL_rect.x, t.mask.SDL_rect.y);
+			int l = 0;
+			for(auto& glyph : t.text.glyphs){
+				if(!std::isspace(glyph.unicode)){
+					if(l >= t.text.layout.size()){
+						debug("Layout does not contain positions for remaining glyphs.\n");
+						break;
+					}else{
+						SDL_FRect dst = t.text.layout.at(l);
+						dst.x += t.draw_pos.SDL_rect.x;
+						dst.y += t.draw_pos.SDL_rect.y - t.scroll_y;
+						auto& atlas = assets.textures.at(assets.glyphs.at(glyph).atlas_tag);
+						auto& src = assets.glyphs.at(glyph).position_on_atlas;
+						SDL_RenderTexture(gui.renderer, atlas, &src, &dst);
+						l += 1;
+					}
+				}
+			}
 		}
 	}
 	SDL_SetRenderClipRect(gui.renderer, NULL);

@@ -84,11 +84,19 @@ class glyphtext {
 	};
 
 	std::vector<glyph> glyphs;
+	
+	//"Words" is a series of whitespace terminated
+	//glyph vectors meant for use when refreshing layout.
+	std::vector<word> words;
+	int ascent = 0;
+	int descent = 0;
+	int default_space = 0;
 	std::vector<SDL_FRect> layout;
 	int height = 0;
 
 	glyphtext(){}
     glyphtext(std::vector<glyph> g):glyphs(g){}
+	void refresh_words(std::unordered_map<glyph, rasterized_glyph, glyph_hash>&);
 	void refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash>&, int, int);
 };
 
@@ -115,9 +123,5 @@ class packing_grid {
 std::unordered_map<glyph, rasterized_glyph, glyph_hash>
 rasterize_glyph_atlas(std::filesystem::path, std::vector<glyph>&, 
     SDL_Renderer*, std::unordered_map<std::string, SDL_Texture*>&, std::string);
-
-void
-render_glyphtext(SDL_Renderer*, std::unordered_map<std::string, SDL_Texture*>&, 
-	glyphtext&, std::unordered_map<glyph, rasterized_glyph, glyph_hash>&, int& x, int& y);
 
 #endif
