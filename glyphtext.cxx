@@ -290,7 +290,7 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash
 		int spaces = line.words.size() - 1;
 		//Ensuring enough room for spaces.
 		if(alignment == GLYPHTEXT_ALIGN_JUSTIFY){
-			if(spaces != -1 && (line.length + word.length) / (spaces + 1) < default_space){
+			if(spaces != -1 && (w - (line.length + word.length)) / (spaces + 1) < default_space){
 				next_line();
 			}
 		}else if(line.length + (default_space * (spaces + 1)) + word.length > w){
@@ -346,17 +346,11 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash
 		pen_x += rg.advance;
 	};
 
-	for(auto& line : lines){
+	for(int line_it = 0; line_it < lines.size(); ++line_it){
+		auto& line = lines.at(line_it);
 		int spaces = line.words.size() - 1;
-		if(alignment == GLYPHTEXT_ALIGN_CENTER){
-			pen_x = (w - (line.length + (spaces * default_space))) / 2;
-			for(auto& word : line.words){
-				for(auto& glyph : word.glyphs){
-					append_layout(ras_info.at(glyph));
-				}
-				pen_x += default_space;
-			}
-		}else if(alignment == GLYPHTEXT_ALIGN_LEFT){
+		bool last_line = line_it == lines.size() - 1;
+		if(alignment == GLYPHTEXT_ALIGN_LEFT){
 			for(auto& word : line.words){
 				for(auto& glyph : word.glyphs){
 					append_layout(ras_info.at(glyph));
@@ -371,12 +365,29 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash
 				}
 				pen_x += default_space;
 			}
+		}else if(alignment == GLYPHTEXT_ALIGN_CENTER){
+			pen_x = (w - (line.length + (spaces * default_space))) / 2;
+			for(auto& word : line.words){
+				for(auto& glyph : word.glyphs){
+					append_layout(ras_info.at(glyph));
+				}
+				pen_x += default_space;
+			}
 		}else if(alignment == GLYPHTEXT_ALIGN_JUSTIFY){
 			if(spaces == 0){
 				for(auto& word : line.words){
 					for(auto& glyph : word.glyphs){
 						append_layout(ras_info.at(glyph));
 					}
+				}
+			}else if(last_line){
+				//TODO: This is the same code as alignment == center; move into a lambda or function
+				pen_x = (w - (line.length + (spaces * default_space))) / 2;
+				for(auto& word : line.words){
+					for(auto& glyph : word.glyphs){
+						append_layout(ras_info.at(glyph));
+					}
+					pen_x += default_space;
 				}
 			}else{
 				int spacing = (w - line.length) / spaces;
