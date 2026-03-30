@@ -24,7 +24,7 @@ UI_element::determine_area(){
 		resize(t.relative_x, t.relative_y, t.relative_w, t.relative_h);
 	}
 	for(auto &txt : this->text){
-		auto& c = txt.draw_pos;
+		auto& c = txt.pos;
 		auto& m = txt.mask;
 		resize(c.relative_x, c.relative_y, c.relative_w, m.relative_h);
 	}

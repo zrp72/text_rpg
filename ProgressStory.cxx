@@ -22,14 +22,14 @@ compare_variables_against_player(game_data& data, story_variables& variables){
 	for(auto& condition : variables.stats_and_items){
 		if(attributes.contains(condition.first)){
 			viable = attributes.at(condition.first) >= condition.second;
-			if(!viable){break;}
 		}else if(items.contains(condition.first)){
-			if(std::find(inv.begin(), inv.end(), items.at(condition.first)) == inv.end()){
+			if(!inv.contains(condition.first)){
 				viable = false;
 			}
 		}else{
 			remaining_variables.stats_and_items.push_back(condition);
 		}
+		if(!viable){break;}
 	}
 	if(!viable){return {false, variables};}
 
@@ -84,21 +84,21 @@ get_destination(game_data &data, nexus &nexus){
 	return data.story.tag_map[exits[exit]];
 }
 
+//TODO: Move this function into class item_container
 void
 alter_inventory(character& player, auto& change){
 	auto& inventory = player.inventory;
-	int open_inventory_space = player.inventory_size - inventory.size();
+	int open_inventory_space = player.inventory.max_size - inventory.used_space;
 
 	if ((open_inventory_space - change.second) < 0){
 		debug("Overburdened" << '\n');
 	}
 
-	auto pos = std::find(inventory.begin(), inventory.end(), change.first);
-	if(pos != inventory.end()){
-		pos->quantity += change.second;
+	if(inventory.contains(change.first)){
+		inventory.at(change.first) += change.second;
 		debug(change.first << " + " << change.second << '\n');
 	}else{
-		inventory.push_back({change.first, change.second});
+		inventory.items.emplace(change.first, change.second);
 		debug("New item: " << change.first << '\n');
 	}
 }

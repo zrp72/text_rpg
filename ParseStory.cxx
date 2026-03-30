@@ -159,15 +159,14 @@ styling::remove_marker(std::string marker){
 }
 
 void
-game_data::parse_story_file(files& files){
+story::parse_story_file(std::filesystem::path path){
 
-	auto& used_glyphs = this->story.used_glyphs;
+	std::string story = open_txt_file(path);
 
 	styling style;
 	texture_info option_textures;
 	texture_info paragraph_textures;
 	glyph_styling glyph_style;
-	std::string& story = files.story;
 	story_variables option_conditions;
 
 	int c = 0;
@@ -253,11 +252,11 @@ game_data::parse_story_file(files& files){
 		case '[': {
 			c += 1;
 			std::string tag = create_substring(story, c, ":", true);
-			if(this->story.tag_map.contains(tag)){
+			if(this->tag_map.contains(tag)){
 				debug("Nexus already exists:" << tag << '\n');
 			}else{
-				int vector_pos = this->story.nexuses.size();
-				this->story.tag_map.emplace(tag, std::pair('n', vector_pos));
+				int vector_pos = this->nexuses.size();
+				this->tag_map.emplace(tag, std::pair('n', vector_pos));
 
 				nexus nexus;
 
@@ -296,7 +295,7 @@ game_data::parse_story_file(files& files){
 					if(story.at(c - 1) == ']'){break;}
 				}
 
-				this->story.nexuses.push_back(nexus);
+				this->nexuses.push_back(nexus);
 			}
 
 			continue;
@@ -310,14 +309,14 @@ game_data::parse_story_file(files& files){
 			c += 1;
 			std::string tag = create_substring(story, c, ":", true);
 			debug("Option tag: " << tag << '\n');
-			if(!this->story.tag_map.contains(tag)){
+			if(!this->tag_map.contains(tag)){
 				debug("Attempted to attach option to undefined paragraph: " << tag << '\n');
-			}else if(this->story.tag_map[tag].first == 'n'){
+			}else if(this->tag_map[tag].first == 'n'){
 				debug("Attempted to attach option to nexus: " << tag << '\n');
 
 			}else{
 
-				int pos = this->story.tag_map.at(tag).second;
+				int pos = this->tag_map.at(tag).second;
 
 				std::string dstlabel = create_substring(story, c, "}", true);
 				option option(dstlabel, option_textures);
@@ -353,15 +352,15 @@ game_data::parse_story_file(files& files){
 					option.prompt.pop_back();
 				}
 
-				this->story.paragraphs.at(pos).options.push_back(option);
+				this->paragraphs.at(pos).options.push_back(option);
 			}
 			continue;
 		}
 		default: {
 			std::string tag = std::string(create_substring(story, c, ":", true));
 
-			if(this->story.tag_map.contains(tag)){
-				if(this->story.tag_map.at(tag).first == 'n'){
+			if(this->tag_map.contains(tag)){
+				if(this->tag_map.at(tag).first == 'n'){
 					debug("Paragraph tag already exists as a nexus: " << tag << '\n');
 				}else{
 					debug("Paragraph tag " << tag << " already exists.\n");
@@ -369,8 +368,8 @@ game_data::parse_story_file(files& files){
 
 			}else{
 
-				int vector_pos = this->story.paragraphs.size();
-				this->story.tag_map.emplace(tag, std::pair('p', vector_pos));
+				int vector_pos = this->paragraphs.size();
+				this->tag_map.emplace(tag, std::pair('p', vector_pos));
 
 				paragraph paragraph(paragraph_textures);
 
@@ -414,7 +413,7 @@ game_data::parse_story_file(files& files){
 					paragraph.text.pop_back();
 				}
 
-				this->story.paragraphs.push_back(paragraph);
+				this->paragraphs.push_back(paragraph);
 			}
 			continue;
 		}

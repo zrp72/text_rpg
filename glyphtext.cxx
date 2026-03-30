@@ -277,6 +277,7 @@ glyphtext::refresh_words(std::unordered_map<glyph, rasterized_glyph, glyph_hash>
 //GLYPHTEXT_ALIGN_JUSTIFY
 void
 glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash>& ras_info, int w, int alignment){
+//TODO: Kerning and attaching '.' to the end of lines.
 	layout.clear();
 
 	int word_count = 0;

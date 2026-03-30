@@ -9,6 +9,7 @@
 #include <functional>
 #include <list>
 
+#include "basic_functions.h"
 #include "glyphtext.h"
 
 class item {
@@ -21,16 +22,24 @@ class item {
 	item(std::string i) : ID(i){}
 };
 
-class item_instance {
+class item_container {
 	public:
-	std::string item_ID;
-	int quantity;
+	std::unordered_map<std::string, int> items;
+	size_t max_size = 0;
+	size_t used_space = 0;
 
-	item_instance(std::string i, int q)
-	: item_ID(i), quantity(q){}
+	item_container(){}
 
-	bool operator==(const item& item){
-		return item_ID == item.ID;
+	bool contains(item* i){
+		return items.contains(i->ID);
+	}
+
+	bool contains(std::string i){
+		return items.contains(i);
+	}
+	
+	int& at(std::string s){
+		return items.at(s);
 	}
 };
 
@@ -42,21 +51,10 @@ class character {
 		{"Agility", 0}
 	};
 	std::string lineage;
-	std::list<item_instance> inventory;
-	int inventory_size = 30;
-	std::map<std::string, std::vector<item_instance>> stashed_items;
+	item_container inventory;
 	std::map<std::string, bool> decisions;
 
 	character():attributes(){};
-};
-
-class files {
-	public:
-	std::string story;
-	std::string items;
-
-	files();
-	files(std::string s, std::string i): story(s), items(i){};
 };
 
 class texture_info {
@@ -152,6 +150,7 @@ class story {
 	std::string story_location;
 
 	story(){}
+	void parse_story_file(std::filesystem::path);
 };
 
 class game_data {
@@ -163,8 +162,6 @@ class game_data {
 	game_data(std::string l){
 		story.story_location = l;
 	}
-
-	void parse_story_file(files&);
 };
 
 class gui_core {
@@ -172,15 +169,6 @@ class gui_core {
 	SDL_Window* window;
 	SDL_Renderer* renderer;
 	TTF_TextEngine* text_engine;
-
-	class window_size {
-		public:
-		int width;
-		int height;
-
-		window_size(){}
-		window_size(int w, int h) : width(w), height(h){}
-	};
 
 	gui_core(){
 		if(!SDL_Init(SDL_INIT_VIDEO)){
@@ -231,12 +219,10 @@ class relative_rect {
 	float relative_h = 1;
 
 	relative_rect(){}
-
 	relative_rect(float x, float y, float w)
 	: relative_x(x), relative_y(y), relative_w(w){
 		relative_h = 0;
 	}
-
 	relative_rect(float x, float y, float w, float h)
 	: relative_x(x), relative_y(y), relative_w(w), relative_h(h){}
 };
@@ -244,13 +230,13 @@ class relative_rect {
 class relative_text {
 	public:
 	glyphtext text;
-	relative_rect draw_pos;
+	relative_rect pos;
 	relative_rect mask;
 	int scroll_y = 0;
 
 	relative_text(){};
-	relative_text(glyphtext t, relative_rect m, relative_rect d)
-	: text(t), mask(m), draw_pos(d){}
+	relative_text(glyphtext t, relative_rect m, relative_rect p)
+	: text(t), mask(m), pos(p){}
 };
 
 class relative_texture {
@@ -295,7 +281,6 @@ class assets {
 	}
 
 	void add_element(std::string, UI_element&, gui_core&);
-
 	SDL_Rect get_texture_srcrect(std::string);
 };
 

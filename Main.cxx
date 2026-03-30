@@ -6,6 +6,10 @@
 
 #define debug(x)  std::cout << x
 
+//Main agenda:
+//ItemCatalog parser
+//Inventory
+//Combat system
 int main(int argc, char** argv) {
 	try {
 		debug("Original directory: " << std::filesystem::current_path() << '\n');
@@ -13,22 +17,20 @@ int main(int argc, char** argv) {
 		std::filesystem::current_path(base_path);
 		debug("New directory: " << std::filesystem::current_path() << '\n');
 
-		files files;
-
-		game_data loaded_data("start");
-		loaded_data.parse_story_file(files);
+		game_data data("start");
+		data.story.parse_story_file(std::filesystem::path("Story.txt"));
 
 		gui_core gui;
 		assets assets(gui);
 		assets.glyphs = rasterize_glyph_atlas(std::filesystem::path("ttf_files"), 
-			loaded_data.story.used_glyphs, gui.renderer, assets.textures, "glyph_atlas");
+			data.story.used_glyphs, gui.renderer, assets.textures, "glyph_atlas");
 
-		if(create_UI_elements(gui, assets, loaded_data)){
+		if(create_UI_elements(gui, assets, data)){
 			debug("Failed to create UI elements");
 			return 1;
 		}
 
-		if(launch_game(loaded_data, assets, gui)){
+		if(launch_game(data, assets, gui)){
 			debug("Failed to launch game");
 			return 1;
 		}

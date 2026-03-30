@@ -15,15 +15,16 @@ TTF_GetStringSize
 
 void
 resize_rect(relative_rect &rect, SDL_Window* window){
-	gui_core::window_size ws;
-	SDL_GetWindowSizeInPixels(window, &ws.width, &ws.height);
+	int window_w;
+	int window_h;
+	SDL_GetWindowSizeInPixels(window, &window_w, &window_h);
 
-	rect.SDL_rect.x = ws.width * rect.relative_x;
-	rect.SDL_rect.y = ws.height * rect.relative_y;
+	rect.SDL_rect.x = window_w * rect.relative_x;
+	rect.SDL_rect.y = window_h * rect.relative_y;
 
-	rect.SDL_rect.w = ws.width * rect.relative_w;
+	rect.SDL_rect.w = window_w * rect.relative_w;
 	if(rect.relative_h != 0){
-		rect.SDL_rect.h = ws.height * rect.relative_h;
+		rect.SDL_rect.h = window_h * rect.relative_h;
 	}else{
 		rect.SDL_rect.h = 0;
 	}
@@ -38,8 +39,8 @@ resize_element(UI_element &obj, gui_core& gui, assets& assets){
 	}
 	for (auto &text : obj.text) {
 		resize_rect(text.mask, gui.window);
-		resize_rect(text.draw_pos, gui.window);
-		text.text.refresh_layout(assets.glyphs, text.draw_pos.SDL_rect.w, 
+		resize_rect(text.pos, gui.window);
+		text.text.refresh_layout(assets.glyphs, text.pos.SDL_rect.w, 
 			GLYPHTEXT_ALIGN_JUSTIFY);
 
 		int max_scroll = text.text.height - text.mask.SDL_rect.h;
@@ -98,8 +99,8 @@ render_element(UI_element& obj, gui_core& gui, assets& assets){
 						break;
 					}else{
 						SDL_FRect dst = t.text.layout.at(l);
-						dst.x += t.draw_pos.SDL_rect.x;
-						dst.y += t.draw_pos.SDL_rect.y - t.scroll_y;
+						dst.x += t.pos.SDL_rect.x;
+						dst.y += t.pos.SDL_rect.y - t.scroll_y;
 						auto& atlas = assets.textures.at(assets.glyphs.at(glyph).atlas_tag);
 						auto& src = assets.glyphs.at(glyph).position_on_atlas;
 						SDL_RenderTexture(gui.renderer, atlas, &src, &dst);
