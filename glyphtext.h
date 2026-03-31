@@ -51,6 +51,7 @@ class rasterized_glyph {
 	std::string atlas_tag;
 	SDL_FRect position_on_atlas;
 	uint32_t unicode;
+	std::unordered_map<size_t, int> kerning;
 	int min_x;
 	int max_x;
 	int min_y;

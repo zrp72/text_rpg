@@ -158,6 +158,7 @@ rasterize_glyph_atlas(std::filesystem::path directory, std::vector<glyph>& glyph
 			}
 
 			TTF_Font* font = TTF_OpenFont(path.string().data(), 24);
+			TTF_SetFontKerning(font, true);
 			cached_fonts.emplace(glyph.style.font, font);
 		}
 
@@ -188,6 +189,17 @@ rasterize_glyph_atlas(std::filesystem::path directory, std::vector<glyph>& glyph
 		);
 		rg.descent = TTF_GetFontDescent(font);
 		rg.ascent = TTF_GetFontAscent(font);
+		if(TTF_GetFontKerning(font)){
+			for(auto& g : glyphs){
+				if(!rg.kerning.contains(g.unicode) && TTF_FontHasGlyph(font, g.unicode)){
+					int kerning;
+					TTF_GetGlyphKerning(font, g.unicode, glyph.unicode, &kerning);
+					rg.kerning.emplace(g.unicode, kerning);
+				}
+			}
+		}else{
+			debug("Kerning is disabled for font " << glyph.style.font << '\n');
+		}
 
 		auto dst = packing_container.find_space(g->w, g->h, 2);
 		if(dst.first == -1){
@@ -236,29 +248,39 @@ void
 glyphtext::refresh_words(std::unordered_map<glyph, rasterized_glyph, glyph_hash>& ras_info){
 //TODO: Make sure every type of whitespace is handled
 	glyphtext::word word;
+	size_t previous;
 	for(auto& g : this->glyphs){
 		ascent = std::max(ascent, ras_info.at(g).ascent);
 		descent = std::min(descent, ras_info.at(g).descent);
 
+		auto& g_info = ras_info.at(g);
+
 		switch(g.unicode){
 		case ' ':
-			default_space = std::max(default_space, ras_info.at(g).advance);
+			default_space = std::max(default_space, g_info.advance);
 			if(!word.glyphs.empty()){
 				words.push_back(word);
 				word.clear();
 			}
-			continue;
+			break;
 
 		case '\n':
 			word.glyphs.push_back(g);
 			words.push_back(word);
 			word.clear();
-			continue;
+			break;
 
 		default:
 			word.glyphs.push_back(g);
-			word.length += ras_info.at(g).advance;
+
+			if(g_info.kerning.contains(previous)){
+				word.length += g_info.kerning.at(previous);
+			}
+			
+			word.length += g_info.advance;
 		}
+
+		previous = g.unicode;
 	}
 	if(!word.glyphs.empty()){
 		words.push_back(word);
@@ -293,6 +315,7 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash
 		}
 	}
 	if(word_count != this->words.size()){
+		debug("Refreshing words.\n");
 		refresh_words(ras_info);
 	}
 
@@ -316,19 +339,36 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash
 			next_line();
 		}
 
-		//Handling words too long for a single line.
-		if(line.length + word.length > w){
+		if(word.length > w){
 			glyphtext::word split_word;
+			size_t previous;
 			for(auto& glyph : word.glyphs){
-				if(split_word.length + ras_info.at(glyph).advance > w){
+				auto& g_info = ras_info.at(glyph);
+
+				if(glyph.unicode == '\n'){
+					line.words.push_back(split_word);
+					line.length += split_word.length;
+					split_word.clear();
+					next_line();
+					continue;
+				}
+
+				if(g_info.kerning.contains(previous)){
+					line.length += g_info.kerning.at(previous);
+				}
+
+				if(split_word.length + g_info.advance > w){
 					line.words.push_back(split_word);
 					line.length += split_word.length;
 					split_word.clear();
 					next_line();
 				}
+
 				split_word.glyphs.push_back(glyph);
-				split_word.length += ras_info.at(glyph).advance;
+				split_word.length += g_info.advance;
+				previous = glyph.unicode;
 			}
+
 			line.words.push_back(split_word);
 			line.length += split_word.length;
 			continue;
@@ -355,67 +395,69 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash
 	int pen_x = 0;
 	int line_padding = 1.4;
 	int lowest_point = 0;
+	size_t previous = ' ';
 
-	auto append_layout = [&](rasterized_glyph& rg){
-		layout.push_back(
-			SDL_FRect(pen_x + rg.min_x, 
-			pen_y - rg.ascent, 
-			rg.position_on_atlas.w, 
-			rg.position_on_atlas.h)
-		);
-		lowest_point = std::max(lowest_point, pen_y - rg.descent);
-		pen_x += rg.advance;
+	auto append_layout = [&](glyphtext::word& word){
+		for(auto& glyph : word.glyphs){
+			auto& rg = ras_info.at(glyph);
+			
+			if(rg.kerning.contains(previous)){
+				debug("Glyph " << char(rg.unicode) << " kerning for " << char(previous) << " is " << rg.kerning.at(previous) << '\n');
+				pen_x += rg.kerning.at(previous);
+			}
+
+			layout.push_back(
+				SDL_FRect(pen_x + rg.min_x, 
+				pen_y - rg.ascent, 
+				rg.position_on_atlas.w, 
+				rg.position_on_atlas.h)
+			);
+
+			lowest_point = std::max(lowest_point, pen_y - rg.descent);
+			pen_x += rg.advance;
+			previous = rg.unicode;
+		}
+		previous = ' ';
 	};
 
 	for(int line_it = 0; line_it < lines.size(); ++line_it){
 		auto& line = lines.at(line_it);
 		int spaces = line.words.size() - 1;
 		bool last_line = line_it == lines.size() - 1;
+
 		if(alignment == GLYPHTEXT_ALIGN_LEFT){
 			for(auto& word : line.words){
-				for(auto& glyph : word.glyphs){
-					append_layout(ras_info.at(glyph));
-				}
+				append_layout(word);
 				pen_x += default_space;
 			}
 		}else if(alignment == GLYPHTEXT_ALIGN_RIGHT){
 			pen_x = w - (line.length + (spaces * default_space));
 			for(auto& word : line.words){
-				for(auto& glyph : word.glyphs){
-					append_layout(ras_info.at(glyph));
-				}
+				append_layout(word);
 				pen_x += default_space;
 			}
 		}else if(alignment == GLYPHTEXT_ALIGN_CENTER){
 			pen_x = (w - (line.length + (spaces * default_space))) / 2;
 			for(auto& word : line.words){
-				for(auto& glyph : word.glyphs){
-					append_layout(ras_info.at(glyph));
-				}
+				append_layout(word);
 				pen_x += default_space;
 			}
 		}else if(alignment == GLYPHTEXT_ALIGN_JUSTIFY){
 			if(spaces == 0){
 				for(auto& word : line.words){
-					for(auto& glyph : word.glyphs){
-						append_layout(ras_info.at(glyph));
-					}
+					append_layout(word);
 				}
 			}else if(last_line){
 				//TODO: This is the same code as alignment == center; move into a lambda or function
 				pen_x = (w - (line.length + (spaces * default_space))) / 2;
 				for(auto& word : line.words){
-					for(auto& glyph : word.glyphs){
-						append_layout(ras_info.at(glyph));
-					}
+					append_layout(word);
 					pen_x += default_space;
 				}
 			}else{
 				int spacing = (w - line.length) / spaces;
 				for(auto& word : line.words){
-					for(auto& glyph : word.glyphs){
-						append_layout(ras_info.at(glyph));
-					}
+					append_layout(word);
 					pen_x += spacing;
 				}
 			}
