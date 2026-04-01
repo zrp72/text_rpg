@@ -5,6 +5,7 @@ LDLIBS = -lSDL3 -lSDL3_image -lSDL3_ttf
 
 obj_files = \
 	Main.o \
+	basic_functions.o \
 	GUI.o \
 	LoadAssets.o \
 	LoadData.o \
