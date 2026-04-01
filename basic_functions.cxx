@@ -1,6 +1,7 @@
 #include <iostream>
 #include <random>
 #include <fstream>
+#include <sstream>
 #include <cstring>
 #include "basic_functions.h"
 
