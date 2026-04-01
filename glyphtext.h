@@ -123,6 +123,6 @@ class packing_grid {
 
 std::unordered_map<glyph, rasterized_glyph, glyph_hash>
 rasterize_glyph_atlas(std::filesystem::path, std::vector<glyph>&, 
-    SDL_Renderer*, std::unordered_map<std::string, SDL_Texture*>&, std::string);
+    SDL_Renderer*, std::unordered_map<std::string, SDL_Texture*>&, std::string, int, int);
 
 #endif

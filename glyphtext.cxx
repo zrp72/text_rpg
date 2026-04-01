@@ -33,7 +33,9 @@ size_t glyph_hash::operator()(const glyph& glyph) const{
 	size_t g = glyph.style.color.g * 5;
 	size_t b = glyph.style.color.b / 30;
 	size_t a = glyph.style.color.a + 44;
-	return u + r + g + b + a;
+	size_t bi = glyph.style.bold + glyph.style.italic * 2;
+	size_t s = glyph.style.size >> 1;
+	return u + r + g + b + a + bi + s;
 }
 
 void glyphtext::word::clear(){
@@ -121,7 +123,7 @@ bool packing_grid::use_pixels(int x, int y, int w, int h){
 std::unordered_map<glyph, rasterized_glyph, glyph_hash>
 rasterize_glyph_atlas(std::filesystem::path directory, std::vector<glyph>& glyphs, 
 	SDL_Renderer* renderer, std::unordered_map<std::string, SDL_Texture*>& container, 
-	std::string atlas_name){
+	std::string atlas_name, int atlas_w, int atlas_h){
 
 	std::filesystem::path original_directory = SDL_GetBasePath();
 	if(!std::filesystem::exists(directory)){
@@ -137,10 +139,8 @@ rasterize_glyph_atlas(std::filesystem::path directory, std::vector<glyph>& glyph
 	int atlas_iteration = 1;
 	std::string atlas_tag = atlas_name + std::to_string(atlas_iteration);
 
-	//NOTE: If atlas size is ever changed, 1024 is also used later in this function.
-	//TODO: Add atlas width and size to function params.
-	packing_grid packing_container(1024, 1024);
-	SDL_Surface* atlas = SDL_CreateSurface(1024, 1024, SDL_PIXELFORMAT_RGBA8888);
+	packing_grid packing_container(atlas_w, atlas_h);
+	SDL_Surface* atlas = SDL_CreateSurface(atlas_w, atlas_h, SDL_PIXELFORMAT_RGBA8888);
 	for(auto& glyph : glyphs){
 
 		if(!cached_fonts.contains(glyph.style.font)){
@@ -194,7 +194,9 @@ rasterize_glyph_atlas(std::filesystem::path directory, std::vector<glyph>& glyph
 				if(!rg.kerning.contains(g.unicode) && TTF_FontHasGlyph(font, g.unicode)){
 					int kerning;
 					TTF_GetGlyphKerning(font, g.unicode, glyph.unicode, &kerning);
-					rg.kerning.emplace(g.unicode, kerning);
+					if(kerning != 0){
+						rg.kerning.emplace(g.unicode, kerning);
+					}
 				}
 			}
 		}else{
@@ -210,7 +212,7 @@ rasterize_glyph_atlas(std::filesystem::path directory, std::vector<glyph>& glyph
 			atlas_iteration += 1;
 			atlas_tag = atlas_name + std::to_string(atlas_iteration);
 
-			packing_container = packing_grid(1024, 1024);
+			packing_container = packing_grid(atlas_w, atlas_h);
 			dst = packing_container.find_space(g->w, g->h, 2);
 			if(dst.first == -1){
 				debug("Glyph is larger than glyph atlas bounds.");
@@ -243,7 +245,7 @@ rasterize_glyph_atlas(std::filesystem::path directory, std::vector<glyph>& glyph
 //Seperates core glyphs by whitespace to create a vector of vectors of glyphs mainly used for layout purposes.
 //
 //This function is automatically called by refresh layout if the amount of cached words is not equal to the amount of words in the core_glyphs. 
-//Automatic calling should not be relied upon if core_glyphs are added without whitespace seperation.
+//Automatic calling does not happen if core_glyphs are added without whitespace seperation.
 void
 glyphtext::refresh_words(std::unordered_map<glyph, rasterized_glyph, glyph_hash>& ras_info){
 //TODO: Make sure every type of whitespace is handled
@@ -299,7 +301,6 @@ glyphtext::refresh_words(std::unordered_map<glyph, rasterized_glyph, glyph_hash>
 //GLYPHTEXT_ALIGN_JUSTIFY
 void
 glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash>& ras_info, int w, int alignment){
-//TODO: Kerning and attaching '.' to the end of lines.
 	layout.clear();
 
 	int word_count = 0;
@@ -322,7 +323,6 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash
 	std::vector<glyphtext::line> lines;
 	glyphtext::line line;
 
-	//Pushes the current line to lines before clearing current line.
 	auto next_line = [&](){
 		lines.push_back(line);
 		line.clear();
@@ -330,7 +330,6 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash
 
 	for(auto& word : words){
 		int spaces = line.words.size() - 1;
-		//Ensuring enough room for spaces.
 		if(alignment == GLYPHTEXT_ALIGN_JUSTIFY){
 			if(spaces != -1 && (w - (line.length + word.length)) / (spaces + 1) < default_space){
 				next_line();
@@ -390,7 +389,6 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash
 	}
 	
 	int font_height = ascent - descent;
-	//font_height will never change, but pen_y moves per line.
 	int pen_y = font_height + descent;
 	int pen_x = 0;
 	int line_padding = 1.4;
@@ -420,46 +418,42 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash
 		previous = ' ';
 	};
 
+	auto layout_line = [&](glyphtext::line& l, int& end_space){
+		for(auto& word : l.words){
+			append_layout(word);
+			pen_x += end_space;
+		}
+	};
+
 	for(int line_it = 0; line_it < lines.size(); ++line_it){
 		auto& line = lines.at(line_it);
 		int spaces = line.words.size() - 1;
 		bool last_line = line_it == lines.size() - 1;
 
 		if(alignment == GLYPHTEXT_ALIGN_LEFT){
-			for(auto& word : line.words){
-				append_layout(word);
-				pen_x += default_space;
-			}
+
+			layout_line(line, default_space);
+
 		}else if(alignment == GLYPHTEXT_ALIGN_RIGHT){
+
 			pen_x = w - (line.length + (spaces * default_space));
-			for(auto& word : line.words){
-				append_layout(word);
-				pen_x += default_space;
-			}
+			layout_line(line, default_space);
+
 		}else if(alignment == GLYPHTEXT_ALIGN_CENTER){
+
 			pen_x = (w - (line.length + (spaces * default_space))) / 2;
-			for(auto& word : line.words){
-				append_layout(word);
-				pen_x += default_space;
-			}
+			layout_line(line, default_space);
+
 		}else if(alignment == GLYPHTEXT_ALIGN_JUSTIFY){
+
 			if(spaces == 0){
-				for(auto& word : line.words){
-					append_layout(word);
-				}
+				layout_line(line, default_space);
 			}else if(last_line){
-				//TODO: This is the same code as alignment == center; move into a lambda or function
 				pen_x = (w - (line.length + (spaces * default_space))) / 2;
-				for(auto& word : line.words){
-					append_layout(word);
-					pen_x += default_space;
-				}
+				layout_line(line, default_space);
 			}else{
 				int spacing = (w - line.length) / spaces;
-				for(auto& word : line.words){
-					append_layout(word);
-					pen_x += spacing;
-				}
+				layout_line(line, spacing);
 			}
 		}
 		pen_y += font_height * line_padding;
