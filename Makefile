@@ -1,16 +1,18 @@
 
+.PHONY: clean all
 
 LDLIBS = -lSDL3 -lSDL3_image -lSDL3_ttf
 
 obj_files = \
-	GUI.o \
-	LoadData.o \
 	Main.o \
+	GUI.o \
+	LoadAssets.o \
+	LoadData.o \
+	OpenFiles.o \
+	ParseStory.o \
 	ProgressStory.o \
 	UI_element_creation.o \
-	OpenFiles.o \
-	LoadAssets.o \
-	ParseStory.o
+	glyphtext.o
 
 all: text_rpg
 
@@ -18,8 +20,7 @@ all: text_rpg
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -std=c++20 -c $< -o $@
 
 text_rpg: $(obj_files)
-	$(CXX) $(LDLIBS) $? -o text_rpg
+	$(CXX) $(LDLIBS) $^ -o text_rpg
 
-.PHONY: clean
 clean:
 	rm -f *.o
