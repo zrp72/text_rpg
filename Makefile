@@ -7,9 +7,7 @@ obj_files = \
 	Main.o \
 	basic_functions.o \
 	GUI.o \
-	LoadAssets.o \
-	LoadData.o \
-	OpenFiles.o \
+	GUI_Assets.o \
 	ParseStory.o \
 	ProgressStory.o \
 	UI_element_creation.o \
