@@ -391,7 +391,7 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash
 	int font_height = ascent - descent;
 	int pen_y = font_height + descent;
 	int pen_x = 0;
-	int line_padding = 1.4;
+	double line_padding = 1.4;
 	int lowest_point = 0;
 	size_t previous = ' ';
 
