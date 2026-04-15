@@ -12,9 +12,16 @@
 
 std::pair<bool, story_variables>
 compare_variables_against_player(game_data& data, story_variables& variables){
-	story_variables remaining_variables;
+	story_variables remaining;
 	auto& items = data.items;
 	auto& attributes = data.player.attributes;
+	if(attributes.empty()){
+		debug("No attributes within given player.\n");
+	}else{
+		for(auto& a : attributes){
+			debug(a.second << '\n');
+		}
+	}
 	auto& decisions = data.player.decisions;
 	auto& inv = data.player.inventory;
 
@@ -27,16 +34,15 @@ compare_variables_against_player(game_data& data, story_variables& variables){
 				viable = false;
 			}
 		}else{
-			remaining_variables.stats_and_items.push_back(condition);
+			remaining.stats_and_items.push_back(condition);
 		}
 		if(!viable){break;}
-	}
-	if(!viable){return {false, variables};}
-
-	for(auto& decision : variables.decisions){
-		if(!decisions.contains(decision)){
-			viable = false;
-			break;
+	}if(viable){
+		for(auto& decision : variables.decisions){
+			if(!decisions.contains(decision)){
+				viable = false;
+				break;
+			}
 		}
 	}
 	return {viable, variables};
@@ -61,7 +67,7 @@ get_destination(game_data &data, nexus &nexus){
 					viable.first = nexus.visits >= condition.second;
 					if(!viable.first){break;}
 				}else{
-					debug("Undefined remaining condition within nexus: " << condition.first << '\n');
+					debug("Undefined remaining condition within nexus: \"" << condition.first << "\"\n");
 				}
 			}
 		}
@@ -116,7 +122,7 @@ check_for_change_maps(game_data &data, auto &search_target){
 				data.player.attributes[change.first] += change.second;
 				debug(change.first << ": " << data.player.attributes[change.first] << '\n');
 			}else{
-				debug("Change tag has no matching stat or item" << change.first << '\n');
+				debug("Change tag has no matching stat or item: \"" << change.first << "\"\n");
 			}
 		}
 		for (const auto& change : st.changes.decisions) {

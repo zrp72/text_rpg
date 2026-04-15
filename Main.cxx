@@ -14,8 +14,7 @@
 int main(int argc, char** argv) {
 	try {
 		debug("Original directory: " << std::filesystem::current_path() << '\n');
-		std::string base_path = SDL_GetBasePath();
-		std::filesystem::current_path(base_path);
+		std::filesystem::current_path(SDL_GetBasePath());
 		debug("New directory: " << std::filesystem::current_path() << '\n');
 
 		game_data data("start");

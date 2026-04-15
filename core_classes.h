@@ -46,9 +46,9 @@ class item_container {
 class character {
 	public:
 	std::map<std::string, int> attributes = {
-		{"Reputation", 0},
-		{"Strenth", 0},
-		{"Agility", 0}
+		{"rep", 0},
+		{"str", 0},
+		{"agility", 0}
 	};
 	std::string lineage;
 	item_container inventory;
@@ -73,13 +73,14 @@ class styling {
 	texture_info paragraph;
 	texture_info option;
 
-	std::list<std::string> bold_markers;
-	std::list<std::string> italic_markers;
+	std::unordered_map<std::string, bool> bold_markers;
+	std::unordered_map<std::string, bool> italic_markers;
 
 	styling(){};
 
-	void add_marker(std::string, std::string);
+	void add_marker(std::string, std::pair<char, bool>);
 	void remove_marker(std::string);
+	
 };
 
 class story_variables {

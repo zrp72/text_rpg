@@ -77,7 +77,6 @@ class glyphtext {
 	class line {
 		public:
 		std::vector<word> words;
-		//LENGTH DOES NOT INCLUDE THE LENGTH OF WHITESPACE.
 		int length = 0;
 		
 		line(){}
@@ -85,9 +84,8 @@ class glyphtext {
 	};
 
 	std::vector<glyph> glyphs;
-	
-	//"Words" is a series of whitespace terminated
-	//glyph vectors meant for use when refreshing layout.
+	//Words is the whitespace terminated version of glyphs
+	//used for layout so that words aren't split between lines
 	std::vector<word> words;
 	int ascent = 0;
 	int descent = 0;

@@ -114,48 +114,63 @@ parse_story_variables(std::string& story, int& c, std::string delimiters, std::s
 }
 
 void
-styling::add_marker(std::string marker, std::string meaning){
-	std::list<std::string>& bm = this->bold_markers;
-	std::list<std::string>& im = this->italic_markers;
+styling::add_marker(std::string marker, std::pair<char, bool> meaning){
+	auto& bm = this->bold_markers;
+	auto& im = this->italic_markers;
 
-	if(meaning == "bold"){
+	if(meaning.first == 'b'){
 
-		if(std::find(bm.begin(), bm.end(), marker) == bm.end()){
-			if(std::find(im.begin(), im.end(), marker) != im.end()){
+		if(!bm.contains(marker)){
+			if(im.contains(marker)){
 				debug("Style marker " << marker << "defined for both bold and italic.\n");
 			}
 
-			bm.push_back(marker);
+			bm.emplace(marker, meaning.second);
 			debug(__LINE__ << '\n');
-			return;
 		}else{
-			debug("Redefinition of bold marker: " << marker << '\n');
-			return;
+			debug("Cancelled redefinition of bold marker: " << marker << '\n');
 		}
 
-	}else if(meaning == "italic"){
+	}else if(meaning.first == 'i'){
 
-		if(std::find(im.begin(), im.end(), marker) == im.end()){
-			if(std::find(bm.begin(), bm.end(), marker) != bm.end()){
+		if(!im.contains(marker)){
+			if(bm.contains(marker)){
 				debug("Style marker " << marker << "defined for both bold and italic.\n");
 			}
 
-			im.push_back(marker);
-			return;
+			im.emplace(marker, meaning.second);
 		}else{
-			debug("Redefinition of italic marker " << marker << '\n');
-			return;
+			debug("Cancelled redefinition of italic marker " << marker << '\n');
 		}
 	}
 
-	debug("Improper definition: " << marker << ':' << meaning << '\n');
 	return;
 }
 
 void
 styling::remove_marker(std::string marker){
-	this->italic_markers.remove(marker);
-	this->bold_markers.remove(marker);
+	this->italic_markers.erase(marker);
+	this->bold_markers.erase(marker);
+}
+
+void
+check_for_markers(styling& s, glyph_styling& g, std::string& story, int& c){
+	for(auto& marker : s.bold_markers){
+		auto pos = story.begin() + c;
+		std::string_view s(pos, pos + marker.first.length());
+		if(marker.first == s){
+			g.bold = marker.second;
+			c += marker.first.length();
+		}
+	}
+	for(auto& marker : s.italic_markers){
+		auto pos = story.begin() + c;
+		std::string_view s(pos, pos + marker.first.length());
+		if(marker.first == s){
+			g.italic = marker.second;
+			c += marker.first.length();
+		}
+	}
 }
 
 void
@@ -164,8 +179,6 @@ story::parse_story_file(std::filesystem::path path){
 	std::string story = open_txt_file(path);
 
 	styling style;
-	texture_info option_textures;
-	texture_info paragraph_textures;
 	glyph_styling glyph_style;
 	story_variables option_conditions;
 
@@ -215,10 +228,26 @@ story::parse_story_file(std::filesystem::path path){
 
 			}else{
 
-				//revisit and figure out why create_substring cant be directly passed twice
 				std::string marker = create_substring(story, c, ":", true);
 				std::string meaning = create_substring(story, c, "\n", true);
-				style.add_marker(marker, meaning);
+				std::pair<char, bool> m;
+				if(meaning.length() == 0){
+					debug("Marker \"" << marker << "\" meaning is empty.\n");
+				}else{
+					m.second = true;
+					if(meaning.at(0) == '!'){
+						m.second = false;
+						meaning.erase(0);
+					}
+					if(meaning == "bold"){
+						m.first = 'b';
+					}else if(meaning == "italic"){
+						m.first = 'i';
+					}else{
+						debug("Undefined meaning for marker \"" << marker << "\": " << meaning << '\n');
+					}
+				}
+				style.add_marker(marker, m);
 
 			}
 
@@ -233,17 +262,17 @@ story::parse_story_file(std::filesystem::path path){
 			if(visual == "font"){
 				glyph_style.font = filename;
 			}else if(visual == "option_border"){
-				option_textures.border = filename;
+				style.option.border = filename;
 			}else if(visual == "option_entry_anim"){
-				option_textures.entry_anim = filename;
+				style.option.entry_anim = filename;
 			}else if(visual == "option_exit_anim"){
-				option_textures.exit_anim = filename;
+				style.option.exit_anim = filename;
 			}else if(visual == "paragraph_border"){
-				paragraph_textures.border = filename;
+				style.paragraph.border = filename;
 			}else if(visual == "paragraph_entry_anim"){
-				paragraph_textures.entry_anim = filename;
+				style.paragraph.entry_anim = filename;
 			}else if(visual == "paragraph_exit_anim"){
-				paragraph_textures.exit_anim = filename;
+				style.paragraph.exit_anim = filename;
 			}else{
 				debug("Undefined visual setting: " << visual << ': ' << filename << '\n');
 			}
@@ -316,10 +345,10 @@ story::parse_story_file(std::filesystem::path path){
 
 			}else{
 
-				int pos = this->tag_map.at(tag).second;
+				auto& par = this->paragraphs.at(this->tag_map.at(tag).second);
 
 				std::string dstlabel = create_substring(story, c, "}", true);
-				option option(dstlabel, option_textures);
+				option option(dstlabel, style.option);
 
 				if(!option_conditions.empty()){
 					option.reveal_conditions = option_conditions;
@@ -335,7 +364,11 @@ story::parse_story_file(std::filesystem::path path){
 				while(c < story.length()){
 					if(story[c] == '\n'){
 						break;
-					}else if(story[c] == ' ' && option.prompt.back().unicode == ' '){
+					}
+
+					check_for_markers(style, glyph_style, story, c);
+
+					if(story[c] == ' ' && option.prompt.back().unicode == ' '){
 						c += 1;
 					}else{
 						glyph glyph(story[c], glyph_style);
@@ -352,7 +385,7 @@ story::parse_story_file(std::filesystem::path path){
 					option.prompt.pop_back();
 				}
 
-				this->paragraphs.at(pos).options.push_back(option);
+				par.options.push_back(option);
 			}
 			continue;
 		}
@@ -371,7 +404,7 @@ story::parse_story_file(std::filesystem::path path){
 				int vector_pos = this->paragraphs.size();
 				this->tag_map.emplace(tag, std::pair('p', vector_pos));
 
-				paragraph paragraph(paragraph_textures);
+				paragraph paragraph(style.paragraph);
 
 				move_iterator_past_whitespace(story, c);
 				if(story[c] == '('){
@@ -396,7 +429,12 @@ story::parse_story_file(std::filesystem::path path){
 							}
 							move_iterator_past_whitespace(story, c);
 						}
-					}else if(story[c] == ' ' && paragraph.text.back().unicode == ' '){
+						continue;
+					}
+					
+					check_for_markers(style, glyph_style, story, c);
+					
+					if(story[c] == ' ' && paragraph.text.back().unicode == ' '){
 						c += 1;
 					}else{
 						glyph glyph(story[c], glyph_style);
