@@ -19,19 +19,19 @@ compare_variables_against_player(game_data& data, story_variables& variables){
 
 	bool viable = true;
 	for(auto& condition : variables.stats_and_items){
-		if(attributes.contains(condition.first)){
-			viable = attributes.at(condition.first) >= condition.second;
-
-		} else if(items.contains(condition.first)){
+		if(items.contains(condition.first)){
 			if(!inv.contains(condition.first)){
 				viable = false;
 			}
 		} else {
-			debug("Assuming unassigned attribute: " << condition.first << '\n');
-			viable = false;
+			if(attributes.contains(condition.first)){
+				viable = attributes.at(condition.first) >= condition.second;
+			} else {
+				debug("Assuming unassigned attribute: " << condition.first << '\n');
+				viable = false;
+			}
 		}
 		if(!viable){break;}
-
 	}
 	
 	if(viable){
@@ -45,7 +45,7 @@ compare_variables_against_player(game_data& data, story_variables& variables){
 	return viable;
 }
 
-std::pair<char, int>
+std::string*
 get_destination(game_data &data, nexus &nexus){
 
 	nexus.visits += 1;
@@ -81,12 +81,12 @@ get_destination(game_data &data, nexus &nexus){
 		debug("No exit found for nexus.\n");
 	}
 
-	auto exits = nexus.exits.at(highest_exit_group).exits;
+	auto& exits = nexus.exits.at(highest_exit_group).exits;
 	if(exits.size() == 0){
 		debug("Nexus exit group has no exits.\n");
 	}
 	int exit = randomize_number(exits.size() - 1);
-	return data.story.tag_map[exits[exit]];
+	return &exits.at(exit);
 }
 
 //TODO: Move this function into class item_container
@@ -153,27 +153,31 @@ update_UI(game_data& data, assets& assets, gui_core& gui){
 
 int
 progress_story(game_data &data, assets& main_assets, gui_core& gui, int choice){
-	auto location = data.story.tag_map.at(data.story.story_location);
+	auto& tag_map = data.story.tag_map;
+	auto& location = data.story.tag_map.at(data.story.story_location);
 	paragraph& p = data.story.paragraphs.at(location.second);
 
 	if(choice > p.options.size()){
 		debug("Clicked option does not exist.\n");
 		return 1;
-	}else{
+	} else {
+
 		option& c = p.options[choice - 1];
-		debug("Dest label: " << c.dest_label << '\n');
-		auto& dest = data.story.tag_map.at(c.dest_label);
 
 		if(!c.changes.empty()){
 			apply_changes(data, c.changes);
 		}
 
-		if(dest.first == 'n'){
-			dest = get_destination(data, data.story.nexuses[dest.second]);
+		debug("Dest label: " << c.dest_label << '\n');
+		std::string* dest = &c.dest_label;
+
+		while(tag_map.at(*dest).first == 'n'){
+			auto& nexus = data.story.nexuses.at(tag_map.at(*dest).second);
+			dest = get_destination(data, nexus);
 		}
 
-		data.story.story_location = c.dest_label;
-		paragraph& new_location = data.story.paragraphs.at(dest.second);
+		data.story.story_location = *dest;
+		paragraph& new_location = data.story.paragraphs.at(tag_map.at(*dest).second);
 
 		if(!new_location.changes.empty()){
 			apply_changes(data, new_location.changes);

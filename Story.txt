@@ -20,14 +20,14 @@ _____________________________________________________
 	Default:
 	Barred_Entry
 
-	-15 Rep:
+	15 Rep:
 	Villain
 ]
 _____________________________________________________
 Barred_Entry: The guards cross their swords as you
 approach.
 
-{Barred_Entry:Town}(-2 Rep) Spin around
+{Barred_Entry:Town}(+5 Rep) Spin around
 _____________________________________________________
 
-Villain:(15 str) Darkness veils your vision.
+Villain:(+15 str) Darkness veils your vision.

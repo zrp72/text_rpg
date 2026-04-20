@@ -88,7 +88,7 @@ parse_story_variables(std::string& story, int& c, std::string delimiters, std::s
 			std::string numbers = s.substr(n_begin, n_end - n_begin);
 			numbers = trim_string(numbers);
 			if(numbers[0] == '+'){
-				numbers.erase(0);
+				numbers.erase(0, 1);
 			}
 
 			int amount;
