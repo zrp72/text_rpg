@@ -205,21 +205,7 @@ launch_game(game_data &data, assets& assets, gui_core& gui){
 				render_element(obj, gui, assets);
 			}
 		}
-
-		/*
-		SDL_FRect dstrect(0, 0, 50, 50);
-		for(auto& glyph : assets.glyphs){
-			debug("Rendering glyph " << char(glyph.first.unicode) << '\n');
-			auto srcrect = glyph.second.position_on_atlas;
-			auto atlas = glyph.second.atlas_tag;
-			SDL_RenderTexture(gui.renderer, assets.textures.at(atlas), &srcrect, &dstrect);
-			dstrect.y += 50;
-			if(dstrect.y > 500){
-				dstrect.x += 50;
-				dstrect.y = 0;
-			}
-		}
-		*/
+		
 		SDL_RenderTexture(gui.renderer, assets.textures.at("glyph_atlas1"), NULL, NULL);
 
 		SDL_RenderPresent(gui.renderer);

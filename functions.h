@@ -17,6 +17,6 @@ int launch_game(game_data&, assets&, gui_core&);
 
 int progress_story(game_data&, assets&, gui_core&, int);
 
-std::pair<bool, story_variables> compare_variables_against_player(game_data&, story_variables&);
+bool compare_variables_against_player(game_data&, story_variables&);
 
 #endif

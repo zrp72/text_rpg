@@ -316,7 +316,6 @@ glyphtext::refresh_layout(std::unordered_map<glyph, rasterized_glyph, glyph_hash
 		}
 	}
 	if(word_count != this->words.size()){
-		debug("Refreshing words.\n");
 		refresh_words(ras_info);
 	}
 

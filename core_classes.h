@@ -45,16 +45,12 @@ class item_container {
 
 class character {
 	public:
-	std::map<std::string, int> attributes = {
-		{"rep", 0},
-		{"str", 0},
-		{"agility", 0}
-	};
+	std::map<std::string, int> attributes;
 	std::string lineage;
 	item_container inventory;
 	std::map<std::string, bool> decisions;
 
-	character():attributes(){};
+	character(){}
 };
 
 class texture_info {
@@ -88,7 +84,7 @@ class story_variables {
 	std::vector<std::pair<std::string, int>> stats_and_items;
 	std::vector<std::string> decisions;
 
-	story_variables(){};
+	story_variables(){}
 
 	void clear(){
 		this->stats_and_items.clear();
@@ -96,10 +92,9 @@ class story_variables {
 	};
 
 	bool empty(){
-		bool empty = true;
-		if(!stats_and_items.empty()){empty = false;}
-		if(!decisions.empty()){empty = false;}
-		return empty;
+		if(!stats_and_items.empty()){return false;}
+		if(!decisions.empty()){return false;}
+		return true;
 	}
 };
 

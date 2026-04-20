@@ -14,29 +14,17 @@
 std::string
 create_substring(std::string& source, int& c, std::string ends, bool lower){
 	std::string string;
-
-	size_t start = source.find_first_not_of(" \n\t\v\f\r", c);
-	if(start == std::string::npos){
-		c = source.length();
-		return string;
-	}
-
 	size_t end = source.find_first_of(ends, c);
 	if(end == std::string::npos){
-		string = source.substr(start);
+		string = trim_string(source.substr(c));
 		c = source.length();
-
 	}else{
-
-		size_t trimmed_end = source.find_last_not_of(" \n\t\v\f\r", end - 1);
-		string = source.substr(start, trimmed_end - start + 1);
+		string = trim_string(source.substr(c, end - c));
 		c = end + 1;
-
 	}
-
-	if(lower){lowercase_string(string);}
-
-	debug("String cut at \"" << source[c - 1] << "\": " << string << '\n');
+	if(lower){
+		string = lowercase_string(string);
+	}
 
 	return string;
 }
@@ -67,7 +55,7 @@ check_double_newline(std::string& story, int c){
 //Numbers must be connected to be parsed correctly, meaning 0 whitespace.
 story_variables
 parse_story_variables(std::string& story, int& c, std::string delimiters, std::string end){
-
+	
 	std::vector<std::string> conditions;
 	story_variables variables;
 
@@ -95,9 +83,13 @@ parse_story_variables(std::string& story, int& c, std::string delimiters, std::s
 		}else{
 
 			int n_begin = s.find_first_of("-+1234567890");
-			int n_end = s.find_first_not_of("-+1234567890", n_begin);
+			int n_end = s.find_first_not_of(" -+1234567890", n_begin);
 
 			std::string numbers = s.substr(n_begin, n_end - n_begin);
+			numbers = trim_string(numbers);
+			if(numbers[0] == '+'){
+				numbers.erase(0);
+			}
 
 			int amount;
 			std::from_chars(numbers.data(), numbers.data() + numbers.length(), amount);
@@ -126,7 +118,6 @@ styling::add_marker(std::string marker, std::pair<char, bool> meaning){
 			}
 
 			bm.emplace(marker, meaning.second);
-			debug(__LINE__ << '\n');
 		}else{
 			debug("Cancelled redefinition of bold marker: " << marker << '\n');
 		}
@@ -185,7 +176,6 @@ story::parse_story_file(std::filesystem::path path){
 	int c = 0;
 	bool undefine = false;
 	while(c < story.length()){
-		debug(__LINE__ << ": " << c << '\n');
 		switch(story[c]){
 		case ' ': {
 			c += 1;
@@ -221,7 +211,6 @@ story::parse_story_file(std::filesystem::path path){
 		case '#': {
 			c += 1;
 
-			debug(undefine << '\n');
 			if(undefine){
 
 				style.remove_marker(create_substring(story, c, "\n", true));
@@ -281,6 +270,8 @@ story::parse_story_file(std::filesystem::path path){
 		case '[': {
 			c += 1;
 			std::string tag = create_substring(story, c, ":", true);
+			move_iterator_past_whitespace(story, c);
+
 			if(this->tag_map.contains(tag)){
 				debug("Nexus already exists:" << tag << '\n');
 			}else{
@@ -291,6 +282,7 @@ story::parse_story_file(std::filesystem::path path){
 
 				while(c < story.length()){
 					nexus::exit_group exit_group;
+					debug("Creating exit group.\n");
 
 					exit_group.conditions = parse_story_variables(story, c, ",:]", ":]");
 
@@ -304,7 +296,9 @@ story::parse_story_file(std::filesystem::path path){
 					}
 
 					while(c < story.length()){
-						exit_group.exits.push_back(create_substring(story, c, "\n]", true));
+						auto exit = create_substring(story, c, "\n]", true);
+						exit_group.exits.push_back(exit);
+						debug(exit << '\n');
 
 						if(story[c - 1] == '\n' && check_double_newline(story, c)){
 							break;
@@ -321,7 +315,11 @@ story::parse_story_file(std::filesystem::path path){
 
 					nexus.exits.push_back(exit_group);
 
-					if(story.at(c - 1) == ']'){break;}
+					if(story[c - 1] == ']'){
+						break;
+					}else if(move_iterator_past_whitespace(story, c); story[c] == ']'){
+						break;
+					}
 				}
 
 				this->nexuses.push_back(nexus);
@@ -391,6 +389,7 @@ story::parse_story_file(std::filesystem::path path){
 		}
 		default: {
 			std::string tag = std::string(create_substring(story, c, ":", true));
+			debug("Creating paragraph \"" << tag << "\"\n");
 
 			if(this->tag_map.contains(tag)){
 				if(this->tag_map.at(tag).first == 'n'){
@@ -409,8 +408,7 @@ story::parse_story_file(std::filesystem::path path){
 				move_iterator_past_whitespace(story, c);
 				if(story[c] == '('){
 					c += 1;
-					auto variables = parse_story_variables(story, c, ",)", ")");
-					paragraph.changes = variables;
+					paragraph.changes = parse_story_variables(story, c, ",)", ")");
 					move_iterator_past_whitespace(story, c);
 				}
 

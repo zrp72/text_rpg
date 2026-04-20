@@ -12,18 +12,33 @@ int randomize_number(int range){
 	return distributor(generator);
 } 
 
-void
-lowercase_string(std::string& text){
-	for(char& c : text){
-		if(std::isupper(c)){
-			c = std::tolower(c);
-		}
+std::string
+lowercase_string(std::string text){
+	std::string result;
+	for(char c : text){
+		result.push_back(std::tolower(c));
 	}
+	return result;
+}
+
+std::string
+trim_string(std::string string){
+	size_t start = string.find_first_not_of(" \n\t\v\f\r");
+	if(start == std::string::npos){
+		return string;
+	}
+
+	int end = string.find_last_not_of(' ');
+
+	return string.substr(start, end - start + 1);
 }
 
 void
 move_iterator_past_whitespace(std::string& source, int& c){
-	while(std::isspace(source[c])){
+	while(c < source.length()){
+		if(!std::isspace(source.at(c))){
+			return;
+		}
 		c += 1;
 	}
 }

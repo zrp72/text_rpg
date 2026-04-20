@@ -73,11 +73,7 @@ create_option_display(gui_core& gui, assets& main_assets, game_data& data){
 		debug("Option iteration: " << iteration << '\n');
 		if(column > 1){row += 1; column = 0;}
 		if(!option.reveal_conditions.empty()){
-			auto viable = compare_variables_against_player(data, option.reveal_conditions);
-			if(!viable.second.empty()){
-				debug("Undefined remaining variables in option reveal conditions. \n");
-			}
-			if(!viable.first){
+			if(!compare_variables_against_player(data, option.reveal_conditions)){
 				iteration += 1;
 				continue;
 			}
